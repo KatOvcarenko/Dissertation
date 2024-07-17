@@ -1,0 +1,22 @@
+//vec3 gerstner_normal(vec3 vertex, vec2 dir, float time, float speed, float steepness, float amplitude, float wavelength) {
+//	float temp = PerlinNoise(vec2(vertex.xz), time/5.0,240.0);
+//
+//	float wave_phase = dot(dir, vertex.xz) * wavelength + speed * time;
+//	float cosfactor = -cos(wave_phase);
+//	float sinfactor = -sin(wave_phase);
+//
+//	float x_normal = dir.x * amplitude * wavelength * cosfactor;
+//	float z_normal = dir.y * amplitude * wavelength * cosfactor;
+//	float y_normal = temp/(steepness/wavelength) * amplitude * wavelength * sinfactor;
+//	return vec3(x_normal, y_normal, z_normal);
+//}
+//vec3 gerstner(vec3 vertex, vec2 dir, float time, float speed, float steepness, float amplitude, float wavelength) {
+//	
+//	float displaced_x = vertex.x + (steepness/wavelength) * dir.x * cos(wavelength * dot(dir, vertex.xz) + speed * time);
+//	float displaced_z = vertex.z + (steepness/wavelength) * dir.y * cos(wavelength * dot(dir, vertex.xz) + speed * time);
+//	float displaced_y = PerlinNoise(vec2(displaced_x,displaced_z), time/5.0,240.0) + vertex.y + amplitude * sin(wavelength * dot(dir, vertex.xz) + speed * time);// + sin(1-vertex.x)/1.5;//
+//	
+//	return vec3(displaced_x, displaced_y, displaced_z);
+//}
+
+	Waves waveInfos[3] = { {Vector2(1.0, 1.0), 0.25, 100, 5.0}, {Vector2(1.0, 0.6), 0.15, 51.0, 1.0},{Vector2(1.0, 1.3), 0.05, 30.0, 0.5} };

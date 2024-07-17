@@ -1,0 +1,45 @@
+vec4 HardLight(vec3 fogCol, float max){
+	vec4 colourDepth;
+
+	//R
+	if(fogCol.x <= 0.5){
+		colourDepth.r = 2 * colour.x * fogCol.x;
+	}
+	else{
+		colourDepth.r = 1 - (2 * (1-colour.x) * (1-fogCol.x));
+	}
+	
+	//G
+	if(fogCol.y <= 0.5){
+		colourDepth.g = 2 * colour.y * fogCol.y;
+	}
+	else{
+		colourDepth.g = 1 - (2 * (1-colour.y) * (1-fogCol.y));
+	}
+	
+	//B
+	if(fogCol.z <= 0.5){
+		colourDepth.b = 2 * colour.z * fogCol.z;
+	}
+	else{
+		colourDepth.b = 1 - (2 * (1-colour.z) * (1-fogCol.z));
+	}
+	
+	//Alpha
+	colourDepth.a = clamp(1-((max + fogColourMixMin) / fogColourMixMax), 0.0, 1.0);
+	return colourDepth;
+}
+
+vec4 LinearLight(vec3 fogCol, float max){
+	vec4 colourDepth;
+	float lumlvl = 0.5;
+	
+	colourDepth.r = colour.x + fogCol.x - lumlvl;
+	colourDepth.g = colour.y + fogCol.y - lumlvl;
+	colourDepth.b = colour.z + fogCol.z - lumlvl;
+	
+	//Alpha
+	colourDepth.a = clamp(1-((max + fogColourMixMin) / fogColourMixMax), 0.0, 1.0);
+	return colourDepth;
+}
+

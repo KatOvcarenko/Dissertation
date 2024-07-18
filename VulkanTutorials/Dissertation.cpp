@@ -51,7 +51,6 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0, 0, camera.GetPosition()));
 	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0, 180, camera.GetPosition()));
 
-	//ssboTexDiffuse = buildcu
 	{colours.push_back(Vector3(0, 0, 0));
 	colours.push_back(Vector3(1, 0, 0));
 	colours.push_back(Vector3(1, 0.5, 0));
@@ -293,12 +292,27 @@ void Dissertation::CreateSSBOBuffers(uint32_t width, uint32_t height) {
 	ssboTexDepth = bufferCubeTex
 		.WithUsages(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled)
 		.WithLayout(vk::ImageLayout::eDepthAttachmentOptimal)
-		.WithFormat(vk::Format::eD16Unorm)//eD32Sfloat
+		.WithFormat(vk::Format::eD16Unorm)
 		.WithAspects(vk::ImageAspectFlagBits::eDepth)
 		.BuildCubemap("buffer Depth texture cube");
 
 	UpdateDescriptors();
 }
+
+//UniqueVulkanTexture Dissertation::GenImageView() {
+//	VulkanTexture* t = new VulkanTexture();
+//
+//	vk::ImageViewType viewType = vk::ImageViewType::e2D;
+//
+//	vk::ImageViewCreateInfo viewInfo = vk::ImageViewCreateInfo()
+//		.setViewType(viewType)
+//		.setFormat(vk::Format::eD16Unorm)
+//		.setSubresourceRange(vk::ImageSubresourceRange(aspects, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS))
+//		.setImage(t->GetImage());
+//
+//	t->defaultView = sourceDevice.createImageViewUnique(viewInfo);
+//	return UniqueVulkanTexture(t);
+//}
 
 void Dissertation::ShaderLoader() {
 	skyboxShader = ShaderBuilder(renderer->GetDevice())
@@ -375,17 +389,22 @@ void Dissertation::CreteUniforms() {
 		.WithHostVisibility()
 		.Build(sizeof(float), "far plane uniform");
 
-	ProjMatUniform  = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
+	ProjMatUniform = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
 		.WithBufferUsage(vk::BufferUsageFlagBits::eUniformBuffer)
 		.WithHostVisibility()
 		.Build(sizeof(Matrix4)*6, "Proj matrix uniform");
+
+	//camBafUniform = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
+	//	.WithBufferUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+	//	.WithHostVisibility()
+	//	.Build(sizeof(camera), "buffer camera uniform");
 
 	Fog fogInfo;
 	Light lightInfo(Vector3(0, 150, -50), 100, Vector4(1.0, 1.0, 1.0, 1.0));
 
 	fogUniform.CopyData((void*)&fogInfo, sizeof(fogInfo));
 	lightUniform.CopyData((void*)&lightInfo, sizeof(lightInfo));
-	ProjMatUniform.CopyData((void*)&cubeViewMat, sizeof(cubeViewMat));
+	ProjMatUniform.CopyData((void*)cubeViewMat.data(), sizeof(Matrix4) * 6);
 	farPlaneUniform.CopyData((void*)&far_plane, sizeof(far_plane));
 }
 
@@ -467,28 +486,59 @@ void Dissertation::RenderFrame(float dt) {
 //	frameState.cmdBuffer.endRendering();
 //}
 
+//void Dissertation::FillBufferCube() {
+//	FrameState const& frameState = renderer->GetFrameState();
+//	frameState.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[Pipelines::cubeBufferP]);
+//	vk::Viewport newViewport = vk::Viewport(0.0f, (float)RENDERAREA, (float)RENDERAREA, -(float)RENDERAREA, 0.0f, 1.0f);
+//	vk::Rect2D	 newScissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(RENDERAREA, RENDERAREA));
+//
+//	frameState.cmdBuffer.beginRendering(
+//		DynamicRenderBuilder()
+//		.WithColourAttachment(*ssboTexDiffuse, vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))
+//		.WithDepthAttachment(*ssboTexDepth, vk::ImageLayout::eDepthAttachmentOptimal, true, { {1.0f} }, false)
+//		.WithRenderArea(newScissor)
+//		.Build()
+//	);
+//
+//	//WriteBufferDescriptor(renderer->GetDevice(), *cameraDescriptor, 0, vk::DescriptorType::eUniformBuffer, cameraBuffer);
+//	//frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, 1, &*cameraDescriptor, 0, nullptr);
+//
+//	frameState.cmdBuffer.setViewport(0, 1, &newViewport);
+//	frameState.cmdBuffer.setScissor(0, 1, &newScissor);
+//	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0,
+//		DSv[DSet::cubeBuffer].size(), DSv[DSet::cubeBuffer].data(), 0, nullptr);
+//
+//	//DrawSkyBox(Pipelines::skyboxB);
+//	//ColourCheck(Pipelines::cubeBufferP, DSet::cubeBuffer);
+//	ColourCheck(Pipelines::objB, DSet::objDS);
+//	frameState.cmdBuffer.endRendering();
+//}
+
 void Dissertation::FillBufferCube() {
 	FrameState const& frameState = renderer->GetFrameState();
 	frameState.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[Pipelines::cubeBufferP]);
 	vk::Viewport newViewport = vk::Viewport(0.0f, (float)RENDERAREA, (float)RENDERAREA, -(float)RENDERAREA, 0.0f, 1.0f);
 	vk::Rect2D	 newScissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(RENDERAREA, RENDERAREA));
-	
+
 	frameState.cmdBuffer.beginRendering(
 		DynamicRenderBuilder()
 		.WithColourAttachment(*ssboTexDiffuse, vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))
 		.WithDepthAttachment(*ssboTexDepth, vk::ImageLayout::eDepthAttachmentOptimal, true, { {1.0f} }, false)
 		.WithRenderArea(newScissor)
+		.WithLayerCount(6)
 		.Build()
 	);
 
+	//WriteBufferDescriptor(renderer->GetDevice(), *cameraDescriptor, 0, vk::DescriptorType::eUniformBuffer, cameraBuffer);
+	//frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, 1, &*cameraDescriptor, 0, nullptr);
+
 	frameState.cmdBuffer.setViewport(0, 1, &newViewport);
 	frameState.cmdBuffer.setScissor(0, 1, &newScissor);
-	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, 
-		DSv[DSet::cubeBuffer].size(), DSv[DSet::cubeBuffer].data(), 0, nullptr);
+	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer].size(), DSv[DSet::cubeBuffer].data(), 0, nullptr);
 
 	//DrawSkyBox(Pipelines::skyboxB);
 	ColourCheck(Pipelines::cubeBufferP, DSet::cubeBuffer);
-	//ColourCheck(Pipelines::objB, DSet::objDS);
+	ColourCheck(Pipelines::objB, DSet::objDS);
 	frameState.cmdBuffer.endRendering();
 }
 
@@ -503,11 +553,6 @@ void Dissertation::UpdateDescriptors() {
 	//WriteImageDescriptor(renderer->GetDevice(), *ssboDescriptor[0], 0, bufferTextures[0]->GetDefaultView(), *defaultSampler);
 	//ssboDescriptor[1] = CreateDescriptorSet(renderer->GetDevice(), renderer->GetDescriptorPool(), waveShader->GetLayout(11));
 	//WriteImageDescriptor(renderer->GetDevice(), *ssboDescriptor[1], 0, bufferTextures[1]->GetDefaultView(), *defaultSampler, vk::ImageLayout::eDepthStencilReadOnlyOptimal);
-
-	//FrameState const& state = renderer->GetFrameState();
-	//vk::Device device = renderer->GetDevice();
-	//vk::DescriptorPool pool = renderer->GetDescriptorPool();
-
 }
 
 void Dissertation::DrawSkyBox(const int num) {

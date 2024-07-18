@@ -26,7 +26,7 @@ namespace NCL::Rendering::Vulkan {
 		void UpdateDescriptors();
 		void CreteDescriptorSets();
 		void CreateRenderObj();
-
+		UniqueVulkanTexture GenImageView();
 
 		int RENDERAREA;
 		int rows;
@@ -63,6 +63,7 @@ namespace NCL::Rendering::Vulkan {
 		VulkanBuffer			waveUniform[3];
 		VulkanBuffer			farPlaneUniform;
 		VulkanBuffer			ProjMatUniform;
+		VulkanBuffer			camBafUniform;
 
 		vk::UniqueDescriptorSet waveDescriptor[3];
 		vk::UniqueDescriptorSet timeDescriptor;
@@ -78,6 +79,7 @@ namespace NCL::Rendering::Vulkan {
 		//vk::UniqueDescriptorSet ssboDescriptor[2];
 		vk::UniqueDescriptorSet ssboDescriptorDiffuse;
 		vk::UniqueDescriptorSet ssboDescriptorDepth;
+		vk::UniqueDescriptorSet camBafDescriptor;
 
 		float far_plane;
 		Matrix4 cubeProjMat;
@@ -143,8 +145,6 @@ namespace NCL::Rendering::Vulkan {
 		};
 
 		VulkanPipeline		pipelines[totalP];
-		//VulkanPipeline		ssboBufferPipeline;
-		//VulkanPipeline		ssboThreeDBufferPipeline;
 
 		enum DSet {
 			objDS,

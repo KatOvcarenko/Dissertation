@@ -4,14 +4,13 @@
 
 layout (triangles) in;
 layout (triangle_strip, max_vertices=18) out;
-layout (location = 0) in vec4 fragPos[];
-layout (location = 1) in vec2 fragTexCoord[];
 
-layout (location = 0) out vec4 geomFragPos;
-layout (location = 1) out vec2 geomTexCoord;
-layout (location = 2) out vec4 FragPos;
+layout (location = 0) in vec3 outPos[];
 
-layout (set = 1, binding = 0) uniform CubeMat
+layout (location = 0) out vec4 FragPos;
+layout (location = 1) out vec3 outviewDir;
+
+layout (set = 2, binding = 0) uniform CubeMat
 {
 	mat4 cubeMatrixes[6];
 };
@@ -24,8 +23,7 @@ void main()
         for(int i = 0; i < 3; ++i)
         {
             FragPos = gl_in[i].gl_Position;
-            geomFragPos = fragPos[i];
-            geomTexCoord = fragTexCoord[i];
+            outviewDir = outPos[i];
             gl_Position = cubeMatrixes[face] * FragPos;
             EmitVertex();
         }    

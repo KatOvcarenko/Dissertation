@@ -18,6 +18,7 @@ layout (set = 0, binding  = 0) uniform  CameraInfo
 
 layout(push_constant) uniform PushConstantVert{
 	mat4 modelMatrix;
+	//mat4 nviewMatrix;
 };
 
 void main() {

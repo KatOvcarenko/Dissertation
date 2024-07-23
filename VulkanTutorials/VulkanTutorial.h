@@ -17,19 +17,6 @@ namespace NCL::Rendering::Vulkan {
 		vk::UniqueDescriptorSet descriptorSet;
 	};
 
-	struct RenderObjects {
-		//VulkanMesh* mesh;
-		int mesh;
-		int pipeline;
-		int descriptorSet;
-		Vector4 colour;
-		Matrix4 transform;
-		bool isRotate;
-		//bool isTexture;
-		float angle;
-		//std::vector<vk::DescriptorSet> descriptorSet;
-	};
-
 	struct Light {
 		Vector3 position;
 		float	radius;

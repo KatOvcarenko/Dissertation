@@ -1,17 +1,20 @@
 #version 450
 #extension GL_ARB_separate_shader_objects   : enable
 #extension GL_ARB_shading_language_420pack  : enable
-//#extension GL_GOOGLE_include_directive	    : enable
 
-//#include "table.glslh"
+//layout (location = 0) in vec3 inNormal;
+//layout (location = 1) in vec3 inWorldPos;
+//layout (location = 2) in mat4 viewMatrix;
 
-layout (location = 0) in vec3 inNormal;
-layout (location = 1) in vec3 inWorldPos;
-layout (location = 2) in mat4 viewMatrix;
+layout (location = 0) in vec4 geomFragPos;
+layout (location = 1) in vec2 geomTexCoord;
+layout (location = 2) in vec4 FragPos;
+layout (location = 3) in vec3 inNormal;
+layout (location = 4) in vec3 inWorldPos;
+layout (location = 5) in mat4 viewMatrix;
 
 layout (location = 0) out vec4 fragColor;
-
-layout (set  = 1, binding = 0) uniform  samplerCube cubeTex;
+layout (location = 1) out vec4 BufferDepth;
 
 layout (set = 2, binding  = 0) uniform CameraPos 
 {
@@ -38,9 +41,8 @@ layout (set = 4, binding  = 0) uniform LightInfo
 layout(push_constant) uniform PushConstantFrag{
 	layout(offset = 64) vec4 colour;
 };
-//layout(push_constant) uniform PushConstantFrag{
-//	layout(offset = 128) vec4 colour;
-//};
+
+float far_plane = 4000.0;
 
 vec3 RGBtoHSV(vec3 rgb){
     float H,S,V;
@@ -115,14 +117,11 @@ float maxDepthColor(vec3 baseCol){
     else                            maxDepth = -10.0	* 1.0;
 
 	return maxDepth;
-    //normDepth = 1-clamp(currentDepth/maxDepth, 0.0, 1.0);
 }
 
 vec4 underwaterColour(vec3 baseCol, float currentDepth){
 	float normDepth;
     vec3 hsv = RGBtoHSV(baseCol.rgb);
-    //int x = int(hsv.x);
-    //int d = (-1) * int(currentDepth);
 	float maxDepth = maxDepthColor(baseCol);//lookupTable(x, d);//
     normDepth = 1-clamp(currentDepth/maxDepth, 0.0, 1.0);
 	
@@ -173,17 +172,11 @@ void main() {
     else
         fogCol = midCol;
 	
-	//vec3 worldDir = normalize(inWorldPos - cameraPosition);
-	//fragColor = colour * texture(cubeTex, reflect(worldDir,inNormal));
-	//vec4 a = vec4(fogCol,1.0) * vec4(colour.rgb,0.5);
-    //fragColor = mix(vec4(fogCol,0.5), colour, visibility); 
-
 	vec3 incident = normalize(lightPos - inWorldPos);
 	float lambert = max(0.0, dot(incident, inNormal)) * 0.9;
 
 	vec4 c = underwaterColour(colour.rgb, currentDepth);
 
-    //vec3 final
 	fragColor.rgb = c.rgb * 0.8f;//c.rgb * vec3(0.8, 0.8, 1.0); //
 	fragColor.rgb += c.rgb * lightCol.rgb * lambert;//* shadow 
     if(currentDepth<0)
@@ -191,4 +184,9 @@ void main() {
     else
         fragColor = c;
 	fragColor.a = 1.0;
+
+    float fragDistance = length(FragPos.xyz - cameraPosition);
+    
+    fragDistance = fragDistance / far_plane;
+    BufferDepth = vec4(fragDistance, fragDistance, fragDistance, 1.0);
 }

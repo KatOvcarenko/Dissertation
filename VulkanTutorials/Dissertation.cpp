@@ -97,6 +97,9 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 	ProjMatDescriptor = CreateDescriptorSet(device, pool, ssboThreeDBufferShader->GetLayout(1));
 	WriteBufferDescriptor(device, *ProjMatDescriptor, 0, vk::DescriptorType::eUniformBuffer, ProjMatUniform);
 
+	ProjMatDescriptorSky = CreateDescriptorSet(device, pool, skyboxShaderB->GetLayout(2));
+	WriteBufferDescriptor(device, *ProjMatDescriptorSky, 0, vk::DescriptorType::eUniformBuffer, ProjMatUniform);
+
 	farPlaneDescriptor = CreateDescriptorSet(device, pool, ssboThreeDBufferShader->GetLayout(3));
 	WriteBufferDescriptor(device, *farPlaneDescriptor, 0, vk::DescriptorType::eUniformBuffer, farPlaneUniform);
 
@@ -105,30 +108,9 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 		WriteImageDescriptor(device, *sandTexDescriptorSet[i], 0, sandTex[i]->GetDefaultView(), *defaultSampler);
 	}*/
 
-	//DescriptorSetWriter(renderer->GetDevice(), *ssboDescriptor[0])
-	//	.WriteImage(0, *bufferTextures[0], *defaultSampler)
-	//	.WriteImage(1, *bufferTextures[0], *defaultSampler, vk::ImageLayout::eDepthStencilReadOnlyOptimal);
-
 	lookup_table = readCSV("C:/Users/c2065496/Documents/VulkanTutorials/lookupTable.csv");
 	UpdateDescriptors();
 	CreteDescriptorSets();
-}
-
-void Dissertation::CreateRenderObj() {
-	Vector4 c_red		= Vector4(1, 0, 0, 1);
-	Vector4 c_orange	= Vector4(1, 0.5, 0, 1);
-	Vector4 c_yellow	= Vector4(1, 1, 0, 1);
-	Vector4 c_green		= Vector4(0, 1, 0, 1);
-	Vector4 c_lblue		= Vector4(0, 1, 1, 1);
-	Vector4 c_dblue		= Vector4(0, 0, 1, 1);
-	Vector4 c_violet	= Vector4(1, 0, 1, 1);
-	Vector4 c_black		= Vector4(0, 0, 0, 1);
-	Vector4 c_white		= Vector4(1, 1, 1, 1);
-
-	//DrawObj(Vector3(-6, -100, -50), Vector3(2, 200, 2), Vector4(1, 0.5, 0, 1), numOfD, Meshes::cubeM);
-
-	rendObj[0].mesh = Meshes::cubeM;
-	rendObj[0].pipeline = Pipelines::objR;
 }
 
 void Dissertation::PipelinesBuilder() {
@@ -154,7 +136,7 @@ void Dissertation::PipelinesBuilder() {
 	pipelines[Pipelines::skyboxB] = PipelineBuilder(device)
 		.WithVertexInputState(meshes[Meshes::quadM]->GetVertexInputState())
 		.WithTopology(meshes[Meshes::quadM]->GetVulkanTopology())
-		.WithShader(skyboxShader)
+		.WithShader(skyboxShaderB)
 		.WithColourAttachment(ssboTexDiffuse->GetFormat())
 		.WithDepthAttachment(ssboTexDepth->GetFormat())
 		.Build("Skybox Pipeline Buffer");
@@ -162,8 +144,7 @@ void Dissertation::PipelinesBuilder() {
 	pipelines[Pipelines::objB] = PipelineBuilder(device)
 		.WithVertexInputState(meshes[Meshes::cubeM]->GetVertexInputState())
 		.WithTopology(meshes[Meshes::cubeM]->GetVulkanTopology())
-		//.WithShader(ssboThreeDBufferShader)
-		.WithShader(objectShader)
+		.WithShader(objectShaderB)
 		.WithColourAttachment(ssboTexDiffuse->GetFormat())
 		.WithDepthAttachment(ssboTexDepth->GetFormat(), vk::CompareOp::eLessOrEqual, true, true)
 		.Build("object Pipeline Buffer");
@@ -173,7 +154,7 @@ void Dissertation::PipelinesBuilder() {
 		.WithTopology(meshes[Meshes::cubeM]->GetVulkanTopology())
 		.WithShader(objectShader)
 		.WithColourAttachment(state.colourFormat)
-		.WithDepthAttachment(renderer->GetDepthBuffer()->GetFormat(), vk::CompareOp::eLessOrEqual, true, true)
+		.WithDepthAttachment(state.depthFormat, vk::CompareOp::eLessOrEqual, true, true)
 		.Build("object Pipeline Render"); 
 
 	pipelines[Pipelines::waterVolumeR]= PipelineBuilder(device)
@@ -181,7 +162,7 @@ void Dissertation::PipelinesBuilder() {
 		.WithTopology(meshes[Meshes::cubeM]->GetVulkanTopology())
 		.WithShader(waterVolumeShader)
 		.WithColourAttachment(state.colourFormat)
-		.WithDepthAttachment(renderer->GetDepthBuffer()->GetFormat(), vk::CompareOp::eLessOrEqual, true, true)
+		.WithDepthAttachment(state.depthFormat, vk::CompareOp::eLessOrEqual, true, true)
 		.Build("Water Volume Pipeline Render");
 
 	/*ssboBufferPipeline = PipelineBuilder(device)
@@ -211,9 +192,23 @@ void Dissertation::CreteDescriptorSets() {
 	*lightDescriptor
 	};
 
+	std::vector<vk::DescriptorSet> objectSetsB = {
+	*cameraDescriptor,		//Set 0
+	*ProjMatDescriptor,		//Set 1
+	*cameraPosDescriptor,	//Set 2
+	*fogDescriptor,			//Set 3
+	*lightDescriptor
+	};
+
 	std::vector<vk::DescriptorSet> skyboxSets = {
 	*cameraDescriptor, //Set 0
 	*cubemapDescriptor //Set 1
+	};
+
+	std::vector<vk::DescriptorSet> skyboxSetsB = {
+	*cameraDescriptor, //Set 0
+	*cubemapDescriptor, //Set 1
+	*ProjMatDescriptorSky
 	};
 
 	std::vector<vk::DescriptorSet> waveSets = {
@@ -248,7 +243,9 @@ void Dissertation::CreteDescriptorSets() {
 	};
 
 	DSv.push_back(objectSets);
+	DSv.push_back(objectSetsB);
 	DSv.push_back(skyboxSets);
+	DSv.push_back(skyboxSetsB);
 	DSv.push_back(waveSets);
 	DSv.push_back(waterSets);
 	DSv.push_back(bufferSets);
@@ -272,7 +269,7 @@ void Dissertation::CreateSSBOBuffers(uint32_t width, uint32_t height) {
 	//	.WithFormat(vk::Format::eD32Sfloat)
 	//	.WithAspects(vk::ImageAspectFlagBits::eDepth)
 	//	.Build("buffer Depth texture");
-
+	//vk::ImageViewType viewType = vk::ImageViewType::e2DArray;
 	TextureBuilder bufferCubeTex(renderer->GetDevice(), renderer->GetMemoryAllocator());
 
 	{bufferCubeTex.UsingPool(renderer->GetCommandPool(CommandBuffer::Graphics))
@@ -283,36 +280,33 @@ void Dissertation::CreateSSBOBuffers(uint32_t width, uint32_t height) {
 		.WithPipeFlags(vk::PipelineStageFlagBits2::eColorAttachmentOutput)
 		.WithLayout(vk::ImageLayout::eColorAttachmentOptimal)
 		.WithFormat(vk::Format::eB8G8R8A8Unorm)
-		//.WithLayerCount(6)
-		;
+		.WithAspects(vk::ImageAspectFlagBits::eColor)
+		.WithLayerCount(6);
 	}
 
-	ssboTexDiffuse = bufferCubeTex.BuildCubemap("buffer diffuse texture cube");
+	ssboTexDiffuse = bufferCubeTex.Build("buffer diffuse texture cube");
+	cubeFaceView[0] = GenImageView(&*ssboTexDiffuse, vk::ImageAspectFlagBits::eColor);
 
 	ssboTexDepth = bufferCubeTex
 		.WithUsages(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled)
 		.WithLayout(vk::ImageLayout::eDepthAttachmentOptimal)
 		.WithFormat(vk::Format::eD16Unorm)
 		.WithAspects(vk::ImageAspectFlagBits::eDepth)
-		.BuildCubemap("buffer Depth texture cube");
+		.Build("buffer Depth texture cube");
+	cubeFaceView[1] = GenImageView(&*ssboTexDepth, vk::ImageAspectFlagBits::eDepth);
 
 	UpdateDescriptors();
 }
 
-//UniqueVulkanTexture Dissertation::GenImageView() {
-//	VulkanTexture* t = new VulkanTexture();
-//
-//	vk::ImageViewType viewType = vk::ImageViewType::e2D;
-//
-//	vk::ImageViewCreateInfo viewInfo = vk::ImageViewCreateInfo()
-//		.setViewType(viewType)
-//		.setFormat(vk::Format::eD16Unorm)
-//		.setSubresourceRange(vk::ImageSubresourceRange(aspects, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS))
-//		.setImage(t->GetImage());
-//
-//	t->defaultView = sourceDevice.createImageViewUnique(viewInfo);
-//	return UniqueVulkanTexture(t);
-//}
+vk::UniqueImageView Dissertation::GenImageView(VulkanTexture* tex, vk::ImageAspectFlags aspects) {
+	vk::ImageViewCreateInfo viewInfo = vk::ImageViewCreateInfo()
+		.setViewType(vk::ImageViewType::e2DArray)
+		.setFormat(tex->GetFormat())
+		.setSubresourceRange(vk::ImageSubresourceRange(aspects, 0, 1, 0, 6))
+		.setImage(tex->GetImage());
+
+	return renderer->GetDevice().createImageViewUnique(viewInfo);
+}
 
 void Dissertation::ShaderLoader() {
 	skyboxShader = ShaderBuilder(renderer->GetDevice())
@@ -320,10 +314,22 @@ void Dissertation::ShaderLoader() {
 		.WithFragmentBinary("skybox.frag.spv")
 		.Build("skybox Shader");
 
+	skyboxShaderB = ShaderBuilder(renderer->GetDevice())
+		.WithVertexBinary("skyboxB.vert.spv")
+		.WithGeometryBinary("skyboxB.geom.spv")
+		.WithFragmentBinary("skyboxB.frag.spv")
+		.Build("skybox Shader");
+
 	objectShader = ShaderBuilder(renderer->GetDevice())
 		.WithVertexBinary("underwaterObject.vert.spv")
 		.WithFragmentBinary("underwaterObject.frag.spv")
 		.Build("obj Shader");
+
+	objectShaderB = ShaderBuilder(renderer->GetDevice())
+		.WithVertexBinary("underwaterObjectB.vert.spv")
+		.WithGeometryBinary("underwaterObjectB.geom.spv")
+		.WithFragmentBinary("underwaterObjectB.frag.spv")
+		.Build("obj Shader buffer");
 
 	waterVolumeShader = ShaderBuilder(renderer->GetDevice())
 		.WithVertexBinary("WaterVolume.vert.spv")
@@ -448,6 +454,13 @@ std::vector<std::vector<std::string>> Dissertation::readCSV(const std::string& f
 }
 
 void Dissertation::RenderFrame(float dt) {
+	cubeViewMat[0]=cubeProjMat * Matrix::lookAt(0, 90, camera.GetPosition());
+	cubeViewMat[1]=cubeProjMat * Matrix::lookAt(0, -90, camera.GetPosition());
+	cubeViewMat[2]=cubeProjMat * Matrix::lookAt(90, 0, camera.GetPosition());
+	cubeViewMat[3]=cubeProjMat * Matrix::lookAt(-90, 0, camera.GetPosition());
+	cubeViewMat[4]=cubeProjMat * Matrix::lookAt(0, 0, camera.GetPosition());
+	cubeViewMat[5]=cubeProjMat * Matrix::lookAt(0, 180, camera.GetPosition());
+	
 	FillBufferCube();
 	
 	TransitionColourToSampler(renderer->GetFrameState().cmdBuffer, *ssboTexDiffuse);
@@ -466,25 +479,6 @@ void Dissertation::RenderFrame(float dt) {
 	TransitionSamplerToColour(renderer->GetFrameState().cmdBuffer, *ssboTexDiffuse);
 	TransitionSamplerToDepth(renderer->GetFrameState().cmdBuffer, *ssboTexDepth);
 }
-
-//void Dissertation::FillBuffer() {
-//	FrameState const& frameState = renderer->GetFrameState();
-//	frameState.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, ssboBufferPipeline);
-//
-//	frameState.cmdBuffer.beginRendering(
-//		DynamicRenderBuilder()
-//		.WithColourAttachment(*bufferTextures[0], vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))
-//		.WithDepthAttachment(*bufferTextures[1], vk::ImageLayout::eDepthAttachmentOptimal, true, {{1.0f}}, false)
-//		.WithRenderArea(frameState.defaultScreenRect)
-//		.Build()
-//	);
-//
-//	WriteBufferDescriptor(renderer->GetDevice(), *cameraDescriptor, 0, vk::DescriptorType::eUniformBuffer, cameraBuffer);
-//	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *ssboBufferPipeline.layout, 0, 1, &*cameraDescriptor, 0, nullptr);
-//	//DrawSkyBox(Pipelines::skyboxB);
-//	ColourCheck(Pipelines::objB);
-//	frameState.cmdBuffer.endRendering();
-//}
 
 //void Dissertation::FillBufferCube() {
 //	FrameState const& frameState = renderer->GetFrameState();
@@ -516,18 +510,18 @@ void Dissertation::RenderFrame(float dt) {
 
 void Dissertation::FillBufferCube() {
 	FrameState const& frameState = renderer->GetFrameState();
-	frameState.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[Pipelines::cubeBufferP]);
 	vk::Viewport newViewport = vk::Viewport(0.0f, (float)RENDERAREA, (float)RENDERAREA, -(float)RENDERAREA, 0.0f, 1.0f);
 	vk::Rect2D	 newScissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(RENDERAREA, RENDERAREA));
 
 	frameState.cmdBuffer.beginRendering(
 		DynamicRenderBuilder()
-		.WithColourAttachment(*ssboTexDiffuse, vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))
-		.WithDepthAttachment(*ssboTexDepth, vk::ImageLayout::eDepthAttachmentOptimal, true, { {1.0f} }, false)
+		.WithColourAttachment(*cubeFaceView[0], vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))//
+		.WithDepthAttachment(*cubeFaceView[1], vk::ImageLayout::eDepthAttachmentOptimal, true, {{1.0f}}, false)
 		.WithRenderArea(newScissor)
 		.WithLayerCount(6)
 		.Build()
 	);
+	frameState.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[Pipelines::cubeBufferP]);
 
 	//WriteBufferDescriptor(renderer->GetDevice(), *cameraDescriptor, 0, vk::DescriptorType::eUniformBuffer, cameraBuffer);
 	//frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, 1, &*cameraDescriptor, 0, nullptr);
@@ -536,9 +530,9 @@ void Dissertation::FillBufferCube() {
 	frameState.cmdBuffer.setScissor(0, 1, &newScissor);
 	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer].size(), DSv[DSet::cubeBuffer].data(), 0, nullptr);
 
-	//DrawSkyBox(Pipelines::skyboxB);
-	ColourCheck(Pipelines::cubeBufferP, DSet::cubeBuffer);
-	ColourCheck(Pipelines::objB, DSet::objDS);
+	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B);
+	//ColourCheck(Pipelines::cubeBufferP, DSet::cubeBuffer);
+	ColourCheck(Pipelines::objB, DSet::objDS_B);
 	frameState.cmdBuffer.endRendering();
 }
 
@@ -555,7 +549,7 @@ void Dissertation::UpdateDescriptors() {
 	//WriteImageDescriptor(renderer->GetDevice(), *ssboDescriptor[1], 0, bufferTextures[1]->GetDefaultView(), *defaultSampler, vk::ImageLayout::eDepthStencilReadOnlyOptimal);
 }
 
-void Dissertation::DrawSkyBox(const int num) {
+void Dissertation::DrawSkyBox(const int num, const int DS) {
 	FrameState const& frameState = renderer->GetFrameState();
 	vk::CommandBuffer cmdBuffer = frameState.cmdBuffer;
 
@@ -569,7 +563,7 @@ void Dissertation::DrawSkyBox(const int num) {
 	//	*cubemapDescriptor //Set 1
 	//};
 	//cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[num].layout, 0, sizeof(skyboxSets) / sizeof(skyboxSets[0]), skyboxSets, 0, nullptr);
-	cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[num].layout, 0, DSv[DSet::skyboxDS].size(), DSv[DSet::skyboxDS].data(), 0, nullptr);
+	cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[num].layout, 0, DSv[DS].size(), DSv[DS].data(), 0, nullptr);
 	meshes[Meshes::quadM]->Draw(cmdBuffer);
 }
 

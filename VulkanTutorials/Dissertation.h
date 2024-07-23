@@ -11,35 +11,37 @@ namespace NCL::Rendering::Vulkan {
 	protected:
 		void RenderFrame(float dt) override;
 		void DrawObj(const Vector3& translation = Vector3(0.0f, 0.0f, 0.0f), const Vector3& scale = Vector3(1.0f, 1.0f, 1.0f),
-			const Vector4& colour = Vector4(0.0f, 0.0f, 0.0f, 1.0f), const int DS = 0, const int& pipeline = 0, const int& meshName = 0, const float& angle = 0, 
+			const Vector4& colour = Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+			const int DS = 0, const int& pipeline = 0, const int& meshName = 0, const float& angle = 0,
 			const Vector3& axis = Vector3(1, 0, 0));
 		void DrawWaves(const int pipeline = 0);
 		void CreteUniforms();
 		void ShaderLoader(); 
 		void DrawWaterVolume(const Vector3& translation, const Vector3& scale, const Vector4& colour, const float angle = 0, const Vector3& axis = Vector3(1, 0, 0), const int pipeline = 0);
 		void ColourCheck(const int numOfP = 0, const int DS = 0);
-		void DrawSkyBox(const int num);
+		void DrawSkyBox(const int num = 0, const int DS = 2);
 		void CreateSSBOBuffers(uint32_t width, uint32_t height);
 		void PipelinesBuilder();
 		void FillBuffer();
 		void FillBufferCube();
 		void UpdateDescriptors();
 		void CreteDescriptorSets();
-		void CreateRenderObj();
-		UniqueVulkanTexture GenImageView();
+		vk::UniqueImageView GenImageView(VulkanTexture* tex, vk::ImageAspectFlags aspects);
 
 		int RENDERAREA;
-		int rows;
+		int rows;		
+		vk::UniqueImageView		cubeFaceView[2];
+		PerspectiveCamera	BCamera;
+
 		std::vector<std::vector<std::string>> readCSV(const std::string& filePath);
 		std::vector<std::vector<std::string>> lookup_table;
 		std::vector<Vector3> colours;
 
-		std::vector<RenderObjects> rendObj;
-		RenderObjects			waterSurface;
-
 		UniqueVulkanShader		waterVolumeShader;
 		UniqueVulkanShader		skyboxShader;
+		UniqueVulkanShader		skyboxShaderB;
 		UniqueVulkanShader		objectShader;
+		UniqueVulkanShader		objectShaderB;
 		UniqueVulkanShader		groundShader;
 		UniqueVulkanShader		waveShader;
 		//UniqueVulkanShader		ssboBufferShader;
@@ -70,13 +72,13 @@ namespace NCL::Rendering::Vulkan {
 		vk::UniqueDescriptorSet	cubemapDescriptor;
 		vk::UniqueDescriptorSet farPlaneDescriptor;
 		vk::UniqueDescriptorSet	ProjMatDescriptor;
+		vk::UniqueDescriptorSet	ProjMatDescriptorSky;
 		vk::UniqueDescriptorSet	sandTexDescriptorSet[5];
 		vk::UniqueDescriptorSet	cameraPosDescriptor;
 		vk::UniqueDescriptorSet fogDescriptor;
 		vk::UniqueDescriptorSet lightDescriptor; 
 		vk::UniqueDescriptorSet dudvTexDescriptor;		
 		vk::UniqueDescriptorSet waterNormalTexDescriptor;
-		//vk::UniqueDescriptorSet ssboDescriptor[2];
 		vk::UniqueDescriptorSet ssboDescriptorDiffuse;
 		vk::UniqueDescriptorSet ssboDescriptorDepth;
 		vk::UniqueDescriptorSet camBafDescriptor;
@@ -147,8 +149,8 @@ namespace NCL::Rendering::Vulkan {
 		VulkanPipeline		pipelines[totalP];
 
 		enum DSet {
-			objDS,
-			skyboxDS,
+			objDS, objDS_B,
+			skyboxDS, skyboxDS_B,
 			wavesDS,	
 			watervolDS,
 			cubeBuffer

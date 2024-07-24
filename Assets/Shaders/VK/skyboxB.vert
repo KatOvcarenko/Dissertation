@@ -3,8 +3,9 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 layout (location = 0) in vec3 inPosition;
+layout (location = 2) in vec3 inTexCoord;
 
-layout (location = 0) out vec3 viewDir;
+layout (location = 0) out vec3 texCoord;
 
 layout (set = 0, binding  = 0) uniform  CameraInfo 
 {
@@ -13,14 +14,8 @@ layout (set = 0, binding  = 0) uniform  CameraInfo
 };
 
 void main() {
-	vec4 worldPos	= vec4(inPosition.xyz, 1);
-	mat4 invProj = inverse(projMatrix);
+	texCoord = inPosition;
+	vec4 worldPos = vec4(inPosition, 1.0);
 
-	viewDir.xy = inPosition.xy * vec2(invProj[0][0], invProj[1][1]);
-	viewDir.z = -1.0f;
-
-	viewDir = transpose(mat3(viewMatrix)) * normalize(viewDir);
-	gl_Position 	= projMatrix * viewMatrix * worldPos;
-
-	//gl_Position 	= worldPos;
+	gl_Position 	= worldPos;
 }

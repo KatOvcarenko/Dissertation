@@ -281,10 +281,11 @@ void Dissertation::CreateSSBOBuffers(uint32_t width, uint32_t height) {
 		.WithLayout(vk::ImageLayout::eColorAttachmentOptimal)
 		.WithFormat(vk::Format::eB8G8R8A8Unorm)
 		.WithAspects(vk::ImageAspectFlagBits::eColor)
-		.WithLayerCount(6);
+		//.WithLayerCount(6)
+		;
 	}
 
-	ssboTexDiffuse = bufferCubeTex.Build("buffer diffuse texture cube");
+	ssboTexDiffuse = bufferCubeTex.BuildCubemap("buffer diffuse texture cube");
 	cubeFaceView[0] = GenImageView(&*ssboTexDiffuse, vk::ImageAspectFlagBits::eColor);
 
 	ssboTexDepth = bufferCubeTex
@@ -292,7 +293,7 @@ void Dissertation::CreateSSBOBuffers(uint32_t width, uint32_t height) {
 		.WithLayout(vk::ImageLayout::eDepthAttachmentOptimal)
 		.WithFormat(vk::Format::eD16Unorm)
 		.WithAspects(vk::ImageAspectFlagBits::eDepth)
-		.Build("buffer Depth texture cube");
+		.BuildCubemap("buffer Depth texture cube");
 	cubeFaceView[1] = GenImageView(&*ssboTexDepth, vk::ImageAspectFlagBits::eDepth);
 
 	UpdateDescriptors();
@@ -518,7 +519,7 @@ void Dissertation::FillBufferCube() {
 		.WithColourAttachment(*cubeFaceView[0], vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))//
 		.WithDepthAttachment(*cubeFaceView[1], vk::ImageLayout::eDepthAttachmentOptimal, true, {{1.0f}}, false)
 		.WithRenderArea(newScissor)
-		.WithLayerCount(6)
+		//.WithLayerCount(6)
 		.Build()
 	);
 	frameState.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[Pipelines::cubeBufferP]);
@@ -531,8 +532,8 @@ void Dissertation::FillBufferCube() {
 	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer].size(), DSv[DSet::cubeBuffer].data(), 0, nullptr);
 
 	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B);
-	//ColourCheck(Pipelines::cubeBufferP, DSet::cubeBuffer);
 	ColourCheck(Pipelines::objB, DSet::objDS_B);
+
 	frameState.cmdBuffer.endRendering();
 }
 
@@ -558,11 +559,6 @@ void Dissertation::DrawSkyBox(const int num, const int DS) {
 	Vector3 newCamPos = camera.GetPosition();
 	camPosUniform.CopyData(&newCamPos, sizeof(Vector3));
 
-	//vk::DescriptorSet skyboxSets[] = {
-	//	*cameraDescriptor, //Set 0
-	//	*cubemapDescriptor //Set 1
-	//};
-	//cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[num].layout, 0, sizeof(skyboxSets) / sizeof(skyboxSets[0]), skyboxSets, 0, nullptr);
 	cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[num].layout, 0, DSv[DS].size(), DSv[DS].data(), 0, nullptr);
 	meshes[Meshes::quadM]->Draw(cmdBuffer);
 }

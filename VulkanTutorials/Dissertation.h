@@ -11,9 +11,8 @@ namespace NCL::Rendering::Vulkan {
 	protected:
 		void RenderFrame(float dt) override;
 		void DrawObj(const Vector3& translation = Vector3(0.0f, 0.0f, 0.0f), const Vector3& scale = Vector3(1.0f, 1.0f, 1.0f),
-			const Vector4& colour = Vector4(0.0f, 0.0f, 0.0f, 1.0f),
-			const int DS = 0, const int& pipeline = 0, const int& meshName = 0, const float& angle = 0,
-			const Vector3& axis = Vector3(1, 0, 0));
+			const Vector4& colour = Vector4(0.0f, 0.0f, 0.0f, 1.0f), const int DS = 0, const int& pipeline = 0, const int& meshName = 0, 
+			const float& angle = 0, const Vector3& axis = Vector3(1, 0, 0));
 		void DrawWaves(const int pipeline = 0);
 		void CreteUniforms();
 		void ShaderLoader(); 
@@ -31,7 +30,7 @@ namespace NCL::Rendering::Vulkan {
 		int RENDERAREA;
 		int rows;		
 		vk::UniqueImageView		cubeFaceView[2];
-		PerspectiveCamera	BCamera;
+		PerspectiveCamera		BCamera;
 
 		std::vector<std::vector<std::string>> readCSV(const std::string& filePath);
 		std::vector<std::vector<std::string>> lookup_table;
@@ -148,9 +147,9 @@ namespace NCL::Rendering::Vulkan {
 
 		VulkanPipeline		pipelines[totalP];
 
-		enum DSet {
-			objDS, objDS_B,
-			skyboxDS, skyboxDS_B,
+		enum DSet {		
+			objDS,		objDS_B,
+			skyboxDS,	skyboxDS_B,
 			wavesDS,	
 			watervolDS,
 			cubeBuffer

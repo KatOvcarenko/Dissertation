@@ -36,9 +36,6 @@ layout(push_constant) uniform PushConstantFrag{
 	layout(offset = 64) vec4 colour;
 }; 
 
-//layout (set = 10, binding  = 0) uniform  sampler2D bufferTexDiff;
-//layout (set = 11, binding  = 0) uniform  sampler2D bufferTexDepth;
-
 layout (set = 10, binding  = 0) uniform  samplerCube bufferTexDiffC;
 layout (set = 11, binding  = 0) uniform  samplerCube bufferTexDepthC;
 
@@ -76,12 +73,13 @@ void main() {
 
 	//if(inWorldPos.x>250.0||inWorldPos.x<-250.0||inWorldPos.z>250.0||inWorldPos.z<-250.0)
 		//discard;
-	
+	vec4 test = texture(bufferTexDiffC,reflect(worldDir,inNormal));
 	vec4 sky = texture(cubeTex, reflect(worldDir,normal));
 	fragColor.rgb *= vec3(0.5,0.65,0.7); //ambient
 	fragColor = mix(fragColor, vec4(colour.rgb,0.2), refractiveFactor); //reflect, refract
 	fragColor.rgb += fragColor.rgb * lightCol.rgb * lambert;//* shadow 
 	fragColor.rgb += lightCol.rgb * sFactor;
+	fragColor.rgb = colour.rgb *test.rgb;
 	if(cameraPosition.y > 0.0)
 		fragColor.rgb = mix(sky.rgb, fragColor.rgb, visibility);
 	else

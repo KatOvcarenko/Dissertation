@@ -53,9 +53,9 @@ void main() {
 
 	vec4 normalTexCol = texture(normalTex, inTexCoord - time/12.0); 
 	vec3 normal = vec3(normalTexCol.r * 2.0 - 1.0, normalTexCol.b, normalTexCol.g * 2.0 - 1.0);
-	normal = inNormal - normalize(normal);//;//
-	//normal = mix(inNormal, normalize(normal),0.5);
-
+	normal = inNormal- normalize(normal);//;// 
+	normal = mix(inNormal, normalize(normal),0.5);
+	//normal = vec3(0.0,1,0.0);
 	vec3 incident = normalize(lightPos - inWorldPos);
 	float lambert = max(0.0, dot(incident, normal)) * 0.5;
 
@@ -67,7 +67,7 @@ void main() {
 	float refractiveFactor = dot(viewVec, normal); // FOR DuDv MAP
 	refractiveFactor = pow(refractiveFactor, 3.0);
 
-	fragColor = colour * texture(bufferTexDiffC2, reflect(worldDir,normal));//texture(dudvMap, inTexCoord);//
+	//fragColor = colour * texture(bufferTexDiffC2, reflect(worldDir,normal));//texture(dudvMap, inTexCoord);//
 
 	vec3 viewDir = normalize ( cameraPosition - inWorldPos );
 	vec3 halfDir = normalize ( incident + viewDir );
@@ -75,9 +75,15 @@ void main() {
 	float rFactor = max(0.0, dot(halfDir ,normal ));
 	float sFactor = pow(rFactor, 100.0 );
 
-	vec4 testReflect = colour * texture(bufferTexDiffC, reflect(worldDir,normal));
-	//if(cameraPosition.y<0)
-	vec4 testRefract = colour * texture(bufferTexDiffC2,reflect(vec3(worldDir.x, worldDir.y,-worldDir.z),vec3(normal.x * 0.5,-normal.y* 0.5,normal.z* 0.5)));
+	vec3 worldDi =cameraPosition -  inWorldPos;
+
+	vec3 incidentDir = normalize(vec3(-worldDi.x, worldDi.y, -worldDi.z));
+	vec3 waterNormal = normalize(vec3(-normal.x, -normal.y, -normal.z));
+
+	vec3 reflectedDir = reflect(incidentDir,waterNormal );
+
+	vec4 testRefract = colour;// * texture(bufferTexDiffC, reflect(vec3(worldDir.x, -worldDir.y, -worldDir.z),vec3(normal.x, normal.y, normal.z)));
+	vec4 testReflect = colour * texture(bufferTexDiffC2, reflectedDir);
 	
 	vec4 sky = texture(cubeTex, reflect(worldDir,normal));
 
@@ -91,4 +97,8 @@ void main() {
 		fragColor.rgb = mix(sky.rgb, fragColor.rgb, visibility);
 	else
 		fragColor.rgb = mix(vec3(0.0,0.3,0.4), fragColor.rgb, visibility);
+
+	vec3 normalizedNormal = normalize(normal);
+    vec3 color = (normalizedNormal * 0.5) + 0.5;
+	//fragColor = vec4(color, 1.0);
 }	

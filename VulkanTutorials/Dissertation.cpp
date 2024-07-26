@@ -40,7 +40,7 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 
 	RENDERAREA = window.GetScreenSize().x;//cubeTex->GetDimensions().x;//
 
-	camera.SetPosition({ 0, 0, 0 }).SetFarPlane(5000.0f);
+	camera.SetPosition({ 0, -20, 0 }).SetFarPlane(5000.0f);
 	far_plane = 4000.0;
 	cubeProjMat = Matrix::Perspective(1.0f, far_plane, 1, 90.f);
 
@@ -537,6 +537,14 @@ void Dissertation::FillBufferCube() {
 
 	frameState.cmdBuffer.endRendering();
 
+	cubeViewMat[0] = cubeProjMat * Matrix::lookAt(180, -90, camera.GetPosition());
+	cubeViewMat[1] = cubeProjMat * Matrix::lookAt(180, 90, camera.GetPosition());
+	cubeViewMat[2] = cubeProjMat * Matrix::lookAt(-90, 0, camera.GetPosition());
+	cubeViewMat[3] = cubeProjMat * Matrix::lookAt(90, 0, camera.GetPosition());
+	cubeViewMat[4] = cubeProjMat * Matrix::lookAt(180, 0, camera.GetPosition());
+	cubeViewMat[5] = cubeProjMat * Matrix::lookAt(180, -180, camera.GetPosition());
+	ProjMatUniform.CopyData((void*)cubeViewMat.data(), sizeof(Matrix4) * 6);
+
 	frameState.cmdBuffer.beginRendering(
 		DynamicRenderBuilder()
 		.WithColourAttachment(*cubeFaceView[2], vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))//
@@ -554,15 +562,15 @@ void Dissertation::FillBufferCube() {
 	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B);
 	ColourCheck(Pipelines::objB, DSet::objDS_B);
 	
-	InvertCamera();
 	frameState.cmdBuffer.endRendering();
+	InvertCamera();
 }
 
 void Dissertation::InvertCamera() {
-	//camera.SetPitch(camera.GetPitch() * -1);
-	camera.SetYaw(camera.GetYaw() * -1);
+	camera.SetPitch(camera.GetPitch() * -1);
+	//camera.SetYaw(camera.GetYaw() * -1);
 	float y = camera.GetPosition().y * -1;
-	camera.SetPosition(Vector3(camera.GetPosition().x, y, camera.GetPosition().z));
+	camera.SetPosition(Vector3(-camera.GetPosition().x, -camera.GetPosition().y, -camera.GetPosition().z));
 }
 
 void Dissertation::UpdateDescriptors() {

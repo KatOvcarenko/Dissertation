@@ -19,7 +19,7 @@ layout(push_constant) uniform PushConstantVert{
 };
 
 void main() {
-	gl_Position	= modelMatrix *vec4(inPos.xyz, 1.0);
+	gl_Position	= modelMatrix * vec4(inPos.xyz, 1.0);
 	//vec4 worldPos = modelMatrix * vec4(inPos.xyz, 1.0);
 	//fragPos = worldPos;
 	//gl_Position	=  projMatrix * viewMatrix * worldPos;

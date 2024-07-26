@@ -12,6 +12,8 @@ License: MIT (see LICENSE file at the top of the source tree)
 
 layout (location = 0) in vec3 inPosition;
 
+layout (location = 0) out vec4 positionRelativeToCam;
+layout (location = 1) out vec3 outPos;
 layout (location = 3) out vec3 viewDir;
 
 layout (set = 0, binding  = 0) uniform  CameraInfo 
@@ -22,15 +24,15 @@ layout (set = 0, binding  = 0) uniform  CameraInfo
 
 void main() {
 	vec4 worldPos	= vec4(inPosition.xyz, 1);
-
 	mat4 invProj = inverse(projMatrix);
 
 	viewDir.xy = inPosition.xy * vec2(invProj[0][0], invProj[1][1]);
 	viewDir.z = -1.0f;
 
 	viewDir = transpose(mat3(viewMatrix)) * normalize(viewDir);
+	vec4 positionRelativeToCam = viewMatrix * worldPos;
 
 	//gl_Position 	= projMatrix * viewMatrix * worldPos;
-
+	outPos			= inPosition.xyz;
 	gl_Position 	= worldPos;
 }

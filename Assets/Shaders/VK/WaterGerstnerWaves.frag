@@ -17,7 +17,7 @@ layout (set = 2, binding  = 0) uniform CameraPos
 	vec3	cameraPosition;
 };
 
-layout (set = 3, binding  = 0) uniform  sampler2D dudvMap; //Diff descriptor
+layout (set = 3, binding  = 0) uniform  sampler2D dudvMap;
 layout (set = 9, binding  = 0) uniform  sampler2D normalTex;
 
 layout (set = 4, binding  = 0) uniform LightInfo
@@ -39,6 +39,9 @@ layout(push_constant) uniform PushConstantFrag{
 layout (set = 10, binding  = 0) uniform  samplerCube bufferTexDiffC;
 layout (set = 11, binding  = 0) uniform  samplerCube bufferTexDepthC;
 
+layout (set = 12, binding  = 0) uniform  samplerCube bufferTexDiffC2;
+layout (set = 13, binding  = 0) uniform  samplerCube bufferTexDepthC2;
+
 void main() {
 	float density = 0.0005f;
 	float grad = 1.5f;
@@ -48,9 +51,10 @@ void main() {
 	visibility = clamp(visibility, 0.00, 1.00);
 	float currentDepth = cameraPosition.y;
 
-	vec4 normalTexCol = texture(normalTex, inTexCoord - time/12.0); //vec2(inTexCoord.x - cos(time/12.0), inTexCoord.y - sin(time/20.0)));//
+	vec4 normalTexCol = texture(normalTex, inTexCoord - time/12.0); 
 	vec3 normal = vec3(normalTexCol.r * 2.0 - 1.0, normalTexCol.b, normalTexCol.g * 2.0 - 1.0);
 	normal = inNormal - normalize(normal);//;//
+	//normal = mix(inNormal, normalize(normal),0.5);
 
 	vec3 incident = normalize(lightPos - inWorldPos);
 	float lambert = max(0.0, dot(incident, normal)) * 0.5;
@@ -60,10 +64,10 @@ void main() {
 	if(cameraPosition.y < 0)
 		toCamVec =  inWorldPos-cameraPosition;
 	vec3 viewVec = normalize(toCamVec);
-	float refractiveFactor = dot(viewVec, inNormal); // FOR DuDv MAP
+	float refractiveFactor = dot(viewVec, normal); // FOR DuDv MAP
 	refractiveFactor = pow(refractiveFactor, 3.0);
 
-	fragColor = colour * texture(cubeTex, reflect(worldDir,normal));//texture(dudvMap, inTexCoord);//
+	fragColor = colour * texture(bufferTexDiffC2, reflect(worldDir,normal));//texture(dudvMap, inTexCoord);//
 
 	vec3 viewDir = normalize ( cameraPosition - inWorldPos );
 	vec3 halfDir = normalize ( incident + viewDir );
@@ -71,15 +75,18 @@ void main() {
 	float rFactor = max(0.0, dot(halfDir ,normal ));
 	float sFactor = pow(rFactor, 100.0 );
 
-	//if(inWorldPos.x>250.0||inWorldPos.x<-250.0||inWorldPos.z>250.0||inWorldPos.z<-250.0)
-		//discard;
-	vec4 test = texture(bufferTexDiffC,reflect(worldDir,inNormal));
+	vec4 testReflect = colour * texture(bufferTexDiffC, reflect(worldDir,normal));
+	//if(cameraPosition.y<0)
+	vec4 testRefract = colour * texture(bufferTexDiffC2,reflect(vec3(worldDir.x, worldDir.y,-worldDir.z),vec3(normal.x * 0.5,-normal.y* 0.5,normal.z* 0.5)));
+	
 	vec4 sky = texture(cubeTex, reflect(worldDir,normal));
+
 	fragColor.rgb *= vec3(0.5,0.65,0.7); //ambient
-	fragColor = mix(fragColor, vec4(colour.rgb,0.2), refractiveFactor); //reflect, refract
-	fragColor.rgb += fragColor.rgb * lightCol.rgb * lambert;//* shadow 
-	fragColor.rgb += lightCol.rgb * sFactor;
-	fragColor.rgb = colour.rgb *test.rgb;
+	//fragColor = mix(fragColor, vec4(colour.rgb,0.2), refractiveFactor);
+	fragColor = mix(testReflect, testRefract, refractiveFactor); //reflect, refract
+	//fragColor.rgb += fragColor.rgb * lightCol.rgb * lambert;//* shadow 
+	//fragColor.rgb += lightCol.rgb * sFactor;
+	
 	if(cameraPosition.y > 0.0)
 		fragColor.rgb = mix(sky.rgb, fragColor.rgb, visibility);
 	else

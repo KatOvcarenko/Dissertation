@@ -21,15 +21,16 @@ namespace NCL::Rendering::Vulkan {
 		void DrawSkyBox(const int num = 0, const int DS = 2);
 		void CreateSSBOBuffers(uint32_t width, uint32_t height);
 		void PipelinesBuilder();
-		void FillBuffer();
+		//void FillBuffer();
 		void FillBufferCube();
 		void UpdateDescriptors();
 		void CreteDescriptorSets();
+		void InvertCamera();
 		vk::UniqueImageView GenImageView(VulkanTexture* tex, vk::ImageAspectFlags aspects);
 
 		int RENDERAREA;
 		int rows;		
-		vk::UniqueImageView		cubeFaceView[2];
+		vk::UniqueImageView		cubeFaceView[4];
 		PerspectiveCamera		BCamera;
 
 		std::vector<std::vector<std::string>> readCSV(const std::string& filePath);
@@ -47,7 +48,8 @@ namespace NCL::Rendering::Vulkan {
 		UniqueVulkanShader		ssboThreeDBufferShader;
 
 		UniqueVulkanTexture		cubeTex;
-		UniqueVulkanTexture		lookupTableTex; 
+		UniqueVulkanTexture		cubeTexs[2];
+		UniqueVulkanTexture		lookupTableTex;
 		UniqueVulkanTexture		sandTex[5];
 		UniqueVulkanTexture		rainbowTex; 
 		UniqueVulkanTexture		dudvmapTex;
@@ -55,6 +57,9 @@ namespace NCL::Rendering::Vulkan {
 		//UniqueVulkanTexture		bufferTextures[2];
 		UniqueVulkanTexture		ssboTexDiffuse;
 		UniqueVulkanTexture		ssboTexDepth;
+
+		UniqueVulkanTexture		ssboTexDiffuse2;
+		UniqueVulkanTexture		ssboTexDepth2;
 
 		VulkanBuffer			camPosUniform;
 		VulkanBuffer			fogUniform;
@@ -75,11 +80,14 @@ namespace NCL::Rendering::Vulkan {
 		vk::UniqueDescriptorSet	sandTexDescriptorSet[5];
 		vk::UniqueDescriptorSet	cameraPosDescriptor;
 		vk::UniqueDescriptorSet fogDescriptor;
+		vk::UniqueDescriptorSet fogDescriptorSky;
 		vk::UniqueDescriptorSet lightDescriptor; 
 		vk::UniqueDescriptorSet dudvTexDescriptor;		
 		vk::UniqueDescriptorSet waterNormalTexDescriptor;
 		vk::UniqueDescriptorSet ssboDescriptorDiffuse;
 		vk::UniqueDescriptorSet ssboDescriptorDepth;
+		vk::UniqueDescriptorSet ssboDescriptorDiffuse2;
+		vk::UniqueDescriptorSet ssboDescriptorDepth2;
 		vk::UniqueDescriptorSet camBafDescriptor;
 
 		float far_plane;
@@ -91,16 +99,16 @@ namespace NCL::Rendering::Vulkan {
 			float	colourMixMin = 20;
 			float	colourMixMax = 40;
 
-			float	gradient = 1.5f;
-			float	density = 0.007f;
+			float	gradient	= 1.5f;
+			float	density		= 0.007f;
 
 			Fog() {
 				colour[0] = Vector4(0.3f, 0.6f, 0.8f, 1.0f);
 				colour[1] = Vector4(0.2f, 0.4f, 0.5f, 1.0f);// //0.0f, 0.5f, 1.0f, 1.0f(0.2f, 0.75f, 1.0f, 1.0f)
 				colour[2] = Vector4(0.0f, 0.2f, 0.3f, 1.0f);//0.0f,0.3f,0.4f(0.0f, 0.2f, 0.8f, 1.0f)
 
-				gradient = 1.5f;
-				density = 0.007f;
+				gradient	= 1.5f;
+				density		= 0.007f;
 
 				colourMixMin = 20;
 				colourMixMax = 40;

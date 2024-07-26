@@ -10,7 +10,7 @@ layout (location = 0) in vec3 TexCoord[];
 layout (location = 0) out vec4 FragPos;
 layout (location = 1) out vec3 texCoordOut;
 
-layout (set = 2, binding = 0) uniform CubeMat
+layout (set = 4, binding = 0) uniform CubeMat
 {
 	mat4 cubeMatrixes[6];
 };
@@ -25,7 +25,6 @@ void main()
             FragPos = gl_in[i].gl_Position * cubeMatrixes[face];
             //FragPos = cubeMatrixes[face] * gl_in[i].gl_Position;
             texCoordOut = FragPos.xyz;
-            //texCoordOut = normalize(FragPos.xyz);
             gl_Position = gl_in[i].gl_Position;
             EmitVertex();
         }    

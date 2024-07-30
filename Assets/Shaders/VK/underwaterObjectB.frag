@@ -2,16 +2,13 @@
 #extension GL_ARB_separate_shader_objects   : enable
 #extension GL_ARB_shading_language_420pack  : enable
 
-//layout (location = 0) in vec3 inNormal;
-//layout (location = 1) in vec3 inWorldPos;
-//layout (location = 2) in mat4 viewMatrix;
-
 layout (location = 0) in vec4 geomFragPos;
 layout (location = 1) in vec2 geomTexCoord;
 layout (location = 2) in vec4 FragPos;
 layout (location = 3) in vec3 inNormal;
 layout (location = 4) in vec3 inWorldPos;
-layout (location = 5) in mat4 viewMatrix;
+layout (location = 5) in vec4 clipPosition;
+layout (location = 6) in mat4 viewMatrix;
 
 layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 BufferDepth;
@@ -36,6 +33,11 @@ layout (set = 4, binding  = 0) uniform LightInfo
 	vec3 lightPos;
 	float lightRad;
 	vec4 lightCol;
+};
+
+layout (set = 6, binding  = 0) uniform clippingPlane 
+{
+	vec4 clipPlane;
 };
 
 layout(push_constant) uniform PushConstantFrag{
@@ -183,9 +185,18 @@ void main() {
         fragColor = mix(vec4(fogCol,1.0), c, visibility);
     else
         fragColor = c;
-	fragColor.a = 1.0;
-
     float fragDistance = length(FragPos.xyz - cameraPosition);
+
+    vec4 cp = clipPlane;
+    if( cameraPosition.y > 0.0){
+        cp = -clipPlane;
+    }
+
+    float distanceClipPlane = dot(clipPosition, cp);
+
+    if (distanceClipPlane > 0.0){
+      discard;
+    }
     
     fragDistance = fragDistance / far_plane;
     BufferDepth = vec4(fragDistance, fragDistance, fragDistance, 1.0);

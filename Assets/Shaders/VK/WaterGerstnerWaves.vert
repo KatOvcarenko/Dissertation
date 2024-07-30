@@ -49,20 +49,21 @@ layout(push_constant) uniform PushConstantVert{
 };
 
 const float PI = 3.14;
-const float tiling = 200;//16.0;
+const float tiling = 200;//16.0;//
 
-vec3 tangent ;
-vec3 binormal;
-
-vec3 gerstner(vec2 dir, float steepness, float wavelength, vec3 vertex, float speed) {
+vec3 gerstner(vec2 dir, float steepness, float wavelength, vec3 vertex, float speed, inout vec3 tangent,inout vec3 binormal) {
 	
 	float waveNum = 2 * PI/wavelength;
 	float g = sqrt(9.8/waveNum);
 	float f = waveNum * dot(dir, vertex.xz) - g * (time/speed);
 	float antiloop = steepness/waveNum;
 
-	tangent += vec3(-dir.x * dir.x *(steepness * sin(f)), dir.x * (steepness * cos(f)), -dir.x * dir.y * (steepness *sin(f)));
-	binormal += vec3(-dir.x * dir.y *(steepness * sin(f)), dir.y * (steepness * cos(f)), -dir.y * dir.y * (steepness *sin(f)));
+	tangent  += vec3(-dir.x * dir.x *(steepness * sin(f)), 
+					  dir.x * (steepness * cos(f)), 
+					  -dir.x * dir.y * (steepness *sin(f)));
+	binormal += vec3(-dir.x * dir.y *(steepness * sin(f)), 
+					 dir.y * (steepness * cos(f)), 
+					 -dir.y * dir.y * (steepness *sin(f)));
 
 	float dir_x = dir.x * (antiloop * cos(f));
 	float dir_z = dir.y * (antiloop * cos(f));
@@ -72,18 +73,19 @@ vec3 gerstner(vec2 dir, float steepness, float wavelength, vec3 vertex, float sp
 }
 
 void main() {
-	tangent = vec3(1, 0, 0);
-	binormal = vec3(0, 0, 1);
+	vec3 tangent = vec3(0, 0, 0);
+	vec3 binormal = vec3(1, 0, 0);
 
 	vec3 wavePosition = inPos.xyz;
 	
-	wavePosition += gerstner(normalize(vec2(0.5,0.2)), cos(time)*0.1, 70, inPos.xyz, 3.0);	
-	wavePosition += gerstner(normalize(WaveA.dir), WaveA.step, WaveA.wLen, inPos.xyz, WaveA.speed);	
-	wavePosition += gerstner(normalize(WaveB.dir), WaveB.step, WaveB.wLen, inPos.xyz, WaveB.speed);	
-	wavePosition += gerstner(normalize(WaveC.dir), WaveC.step, WaveC.wLen, inPos.xyz, WaveC.speed);
+	wavePosition += gerstner(normalize(WaveA.dir), WaveA.step, WaveA.wLen, inPos.xyz, WaveA.speed, tangent,binormal);	
+	wavePosition += gerstner(normalize(WaveB.dir), WaveB.step, WaveB.wLen, inPos.xyz, WaveB.speed, tangent,binormal);	
+	wavePosition += gerstner(normalize(WaveC.dir), WaveC.step, WaveC.wLen, inPos.xyz, WaveC.speed, tangent,binormal);
 	wavePosition.y += PerlinNoise(vec2(wavePosition.x,wavePosition.z), time*1.2, 240.0, 15.0);
 	//wavePosition.y += PerlinNoise(vec2(wavePosition.x,wavePosition.z), time*0.5, 10.0, 1.5);
 
+	tangent = normalize(tangent);
+	binormal = normalize(binormal);
 	vec3 waveNormal = normalize(cross(binormal, tangent));
 	mat3 normalMatrix = inverse(transpose(mat3(modelMatrix)));
 

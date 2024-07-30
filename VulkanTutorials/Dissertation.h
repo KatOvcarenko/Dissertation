@@ -21,7 +21,7 @@ namespace NCL::Rendering::Vulkan {
 		void DrawSkyBox(const int num = 0, const int DS = 2);
 		void CreateSSBOBuffers(uint32_t width, uint32_t height);
 		void PipelinesBuilder();
-		//void FillBuffer();
+		void FillBufferCubeUpSideDown();
 		void FillBufferCube();
 		void UpdateDescriptors();
 		void CreteDescriptorSets();
@@ -44,41 +44,46 @@ namespace NCL::Rendering::Vulkan {
 		UniqueVulkanShader		objectShaderB;
 		UniqueVulkanShader		groundShader;
 		UniqueVulkanShader		waveShader;
-		//UniqueVulkanShader		ssboBufferShader;
 		UniqueVulkanShader		ssboThreeDBufferShader;
 
 		UniqueVulkanTexture		cubeTex;
+		UniqueVulkanTexture		cubeTex2;
 		UniqueVulkanTexture		cubeTexs[2];
 		UniqueVulkanTexture		lookupTableTex;
 		UniqueVulkanTexture		sandTex[5];
 		UniqueVulkanTexture		rainbowTex; 
 		UniqueVulkanTexture		dudvmapTex;
 		UniqueVulkanTexture		waterNormalTex;
-		//UniqueVulkanTexture		bufferTextures[2];
 		UniqueVulkanTexture		ssboTexDiffuse;
 		UniqueVulkanTexture		ssboTexDepth;
-
 		UniqueVulkanTexture		ssboTexDiffuse2;
 		UniqueVulkanTexture		ssboTexDepth2;
 
-		VulkanBuffer			camPosUniform;
+		VulkanBuffer			camPosUniform;		
+		VulkanBuffer			newViewcameraBufferUniform;
 		VulkanBuffer			fogUniform;
 		VulkanBuffer			lightUniform; 
 		VulkanBuffer			waterNormalTexUniform;
 		VulkanBuffer			timeUniform;
 		VulkanBuffer			waveUniform[3];
 		VulkanBuffer			farPlaneUniform;
-		VulkanBuffer			ProjMatUniform;
-		VulkanBuffer			camBafUniform;
+		VulkanBuffer			ViewMatUniformRefract;
+		VulkanBuffer			ViewMatUniformReflect;
+		VulkanBuffer			clippingPlaneUniform[2];
 
 		vk::UniqueDescriptorSet waveDescriptor[3];
 		vk::UniqueDescriptorSet timeDescriptor;
 		vk::UniqueDescriptorSet	cubemapDescriptor;
+		vk::UniqueDescriptorSet	cubemapDescriptor2;
 		vk::UniqueDescriptorSet farPlaneDescriptor;
-		vk::UniqueDescriptorSet	ProjMatDescriptor;
-		vk::UniqueDescriptorSet	ProjMatDescriptorSky;
+		vk::UniqueDescriptorSet	ViewMatRefractDescriptor;
+		vk::UniqueDescriptorSet	ViewMatRefractDescriptorSky;
+		vk::UniqueDescriptorSet	ViewMatReflectionDescriptor;
+		vk::UniqueDescriptorSet	ViewMatReflectionDescriptorSky;
 		vk::UniqueDescriptorSet	sandTexDescriptorSet[5];
-		vk::UniqueDescriptorSet	cameraPosDescriptor;
+		vk::UniqueDescriptorSet	cameraPosDescriptor;		
+		vk::UniqueDescriptorSet	newViewCameraDescriptor;
+		vk::UniqueDescriptorSet	cameraPosDescriptorBuffer;
 		vk::UniqueDescriptorSet fogDescriptor;
 		vk::UniqueDescriptorSet fogDescriptorSky;
 		vk::UniqueDescriptorSet lightDescriptor; 
@@ -88,11 +93,15 @@ namespace NCL::Rendering::Vulkan {
 		vk::UniqueDescriptorSet ssboDescriptorDepth;
 		vk::UniqueDescriptorSet ssboDescriptorDiffuse2;
 		vk::UniqueDescriptorSet ssboDescriptorDepth2;
-		vk::UniqueDescriptorSet camBafDescriptor;
+		vk::UniqueDescriptorSet clippingPlaneDescriptor[2];
 
+		Vector4 clippingPlane[2];
+		Vector3 newCamPos;
 		float far_plane;
 		Matrix4 cubeProjMat;
+		Matrix4 newView;
 		std::vector<Matrix4> cubeViewMat;
+		std::vector<Matrix4> cubeViewMatUpSideDown;
 
 		struct Fog {
 			Vector4 colour[3];
@@ -156,11 +165,11 @@ namespace NCL::Rendering::Vulkan {
 		VulkanPipeline		pipelines[totalP];
 
 		enum DSet {		
-			objDS,		objDS_B,
-			skyboxDS,	skyboxDS_B,
+			objDS,		objDS_B_Refract,	objDS_B_Reflect,
+			skyboxDS,	skyboxDS_B_Refract, skyboxDS_B_Reflect,
 			wavesDS,	
 			watervolDS,
-			cubeBuffer
+						cubeBuffer_Refract,	cubeBuffer_Reflect
 		};
 
 		std::vector<std::vector<vk::DescriptorSet>> DSv;

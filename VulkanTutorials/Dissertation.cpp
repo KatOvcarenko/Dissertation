@@ -24,6 +24,13 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 	meshes[Meshes::sphereM] = LoadMesh("Sphere.msh");
 	meshes[Meshes::gridM] = GenerateGrid1(2060);
 	
+	cubeTex2 = LoadCubemap(
+		"Cubemap/side.JPG", "Cubemap/side.JPG",
+		"Cubemap/UPnDown.JPG", "Cubemap/UPnDown.JPG",
+		"Cubemap/side.JPG", "Cubemap/side.JPG",
+		"Cubemap Texture!"
+	);
+
 	cubeTex = LoadCubemap(
 		"Cubemap/Daylight Box_Right.png", "Cubemap/Daylight Box_Left.png",
 		"Cubemap/Daylight Box_Top.png", "Cubemap/Daylight Box_Bottom.png",
@@ -40,16 +47,23 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 
 	RENDERAREA = window.GetScreenSize().x;//cubeTex->GetDimensions().x;//
 
-	camera.SetPosition({ 0, -20, 0 }).SetFarPlane(5000.0f);
+	camera.SetPosition({ 0, 10, 0 }).SetFarPlane(5000.0f);
 	far_plane = 4000.0;
 	cubeProjMat = Matrix::Perspective(1.0f, far_plane, 1, 90.f);
 
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0, 90, camera.GetPosition()));
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0, -90, camera.GetPosition()));
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(90, 0, camera.GetPosition()));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , -90, camera.GetPosition()));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , 90, camera.GetPosition()));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(90 , 0, camera.GetPosition()));
 	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(-90, 0, camera.GetPosition()));
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0, 0, camera.GetPosition()));
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0, 180, camera.GetPosition()));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , 0, camera.GetPosition()));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , 180, camera.GetPosition()));
+
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(180, -90, camera.GetPosition()));
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(180, 90, camera.GetPosition()) );
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(-90, 180, camera.GetPosition()));
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(90, 180, camera.GetPosition()) );
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(180, 180, camera.GetPosition()));
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(180, 0, camera.GetPosition())  );
 
 	{colours.push_back(Vector3(0, 0, 0));
 	colours.push_back(Vector3(1, 0, 0));
@@ -68,6 +82,9 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 
 	cubemapDescriptor = CreateDescriptorSet(device, pool, objectShader->GetLayout(1));
 	WriteImageDescriptor(device, *cubemapDescriptor, 0, cubeTex->GetDefaultView(), *defaultSampler);
+
+	cubemapDescriptor2 = CreateDescriptorSet(device, pool, skyboxShaderB->GetLayout(4));
+	WriteImageDescriptor(device, *cubemapDescriptor2, 0, cubeTex2->GetDefaultView(), *defaultSampler);
 
 	cameraPosDescriptor = CreateDescriptorSet(device, pool, objectShader->GetLayout(2));
 
@@ -94,14 +111,28 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 	timeDescriptor = CreateDescriptorSet(device, pool, waveShader->GetLayout(8));
 	WriteBufferDescriptor(device, *timeDescriptor, 0, vk::DescriptorType::eUniformBuffer, timeUniform);
 
-	ProjMatDescriptor = CreateDescriptorSet(device, pool, ssboThreeDBufferShader->GetLayout(1));
-	WriteBufferDescriptor(device, *ProjMatDescriptor, 0, vk::DescriptorType::eUniformBuffer, ProjMatUniform);
+	ViewMatRefractDescriptor = CreateDescriptorSet(device, pool, ssboThreeDBufferShader->GetLayout(1));
+	WriteBufferDescriptor(device, *ViewMatRefractDescriptor, 0, vk::DescriptorType::eUniformBuffer, ViewMatUniformRefract);
 
-	ProjMatDescriptorSky = CreateDescriptorSet(device, pool, skyboxShaderB->GetLayout(4));
-	WriteBufferDescriptor(device, *ProjMatDescriptorSky, 0, vk::DescriptorType::eUniformBuffer, ProjMatUniform);
+	ViewMatRefractDescriptorSky = CreateDescriptorSet(device, pool, skyboxShaderB->GetLayout(5));
+	WriteBufferDescriptor(device, *ViewMatRefractDescriptorSky, 0, vk::DescriptorType::eUniformBuffer, ViewMatUniformRefract);
+
+	ViewMatReflectionDescriptor = CreateDescriptorSet(device, pool, ssboThreeDBufferShader->GetLayout(1));
+	WriteBufferDescriptor(device, *ViewMatReflectionDescriptor, 0, vk::DescriptorType::eUniformBuffer, ViewMatUniformReflect);
+
+	ViewMatReflectionDescriptorSky = CreateDescriptorSet(device, pool, skyboxShaderB->GetLayout(5));
+	WriteBufferDescriptor(device, *ViewMatReflectionDescriptorSky, 0, vk::DescriptorType::eUniformBuffer, ViewMatUniformReflect);
 
 	farPlaneDescriptor = CreateDescriptorSet(device, pool, ssboThreeDBufferShader->GetLayout(3));
 	WriteBufferDescriptor(device, *farPlaneDescriptor, 0, vk::DescriptorType::eUniformBuffer, farPlaneUniform);
+
+	newViewCameraDescriptor = CreateDescriptorSet(device, pool, objectShaderB->GetLayout(5));
+	WriteBufferDescriptor(device, *newViewCameraDescriptor, 0, vk::DescriptorType::eUniformBuffer, newViewcameraBufferUniform);
+
+	clippingPlaneDescriptor[0] = CreateDescriptorSet(device, pool, objectShaderB->GetLayout(6));
+	clippingPlaneDescriptor[1] = CreateDescriptorSet(device, pool, objectShaderB->GetLayout(6));
+	WriteBufferDescriptor(device, *clippingPlaneDescriptor[0], 0, vk::DescriptorType::eUniformBuffer, clippingPlaneUniform[0]);
+	WriteBufferDescriptor(device, *clippingPlaneDescriptor[1], 0, vk::DescriptorType::eUniformBuffer, clippingPlaneUniform[1]);
 
 	/*for (int i = 0; i < 5; ++i) {
 		sandTexDescriptorSet[i] = CreateDescriptorSet(device, pool, shader->GetLayout(i));
@@ -183,7 +214,7 @@ void Dissertation::PipelinesBuilder() {
 }
 
 void Dissertation::CreteDescriptorSets() {
-	std::vector<vk::DescriptorSet> objectSets = {
+	std::vector<vk::DescriptorSet> objD = {
 	*cameraDescriptor,		//Set 0
 	*cubemapDescriptor,		//Set 1
 	*cameraPosDescriptor,	//Set 2
@@ -191,30 +222,53 @@ void Dissertation::CreteDescriptorSets() {
 	*lightDescriptor
 	};
 
-	std::vector<vk::DescriptorSet> objectSetsB = {
+	std::vector<vk::DescriptorSet> objD_B_Refract = {
 	*cameraDescriptor,		//Set 0
-	*ProjMatDescriptor,		//Set 1
+	*ViewMatRefractDescriptor,		//Set 1
 	*cameraPosDescriptor,	//Set 2
 	*fogDescriptor,			//Set 3
-	*lightDescriptor
+	*lightDescriptor,
+	*newViewCameraDescriptor,
+	*clippingPlaneDescriptor[0]
 	};
 
-	std::vector<vk::DescriptorSet> skyboxSets = {
+	std::vector<vk::DescriptorSet> objD_B_Reflect = {
+	*cameraDescriptor,		//Set 0
+	*ViewMatReflectionDescriptor,		//Set 1
+	*cameraPosDescriptor,	//Set 2
+	*fogDescriptor,			//Set 3
+	*lightDescriptor,
+	*newViewCameraDescriptor,
+	*clippingPlaneDescriptor[1]
+	};
+
+	std::vector<vk::DescriptorSet> skyboxD = {
 	*cameraDescriptor, //Set 0
 	*cubemapDescriptor, //Set 1
 	*cameraPosDescriptor,
-	*fogDescriptor
+	*fogDescriptor,
+	*cubemapDescriptor2
 	};
 
-	std::vector<vk::DescriptorSet> skyboxSetsB = {
+	std::vector<vk::DescriptorSet> skyboxD_B_Refract = {
 	*cameraDescriptor, //Set 0
 	*cubemapDescriptor, //Set 1
 	*cameraPosDescriptor,//2
 	*fogDescriptor,//3
-	*ProjMatDescriptorSky//4
+	*cubemapDescriptor2,//4
+	*ViewMatRefractDescriptorSky
 	};
 
-	std::vector<vk::DescriptorSet> waveSets = {
+	std::vector<vk::DescriptorSet> skyboxD_B_Reflect = {
+	*cameraDescriptor, //Set 0
+	*cubemapDescriptor, //Set 1
+	*cameraPosDescriptor,//2
+	*fogDescriptor,//3
+	*cubemapDescriptor2,//4
+	*ViewMatReflectionDescriptorSky
+	};
+
+	std::vector<vk::DescriptorSet> wavesD = {
 	*cameraDescriptor,		//Set 0
 	*cubemapDescriptor,		//Set 1
 	*cameraPosDescriptor,	//Set 2
@@ -231,27 +285,37 @@ void Dissertation::CreteDescriptorSets() {
 	*ssboDescriptorDepth2
 	};
 
-	std::vector<vk::DescriptorSet> waterSets = {
+	std::vector<vk::DescriptorSet> watervolD = {
 	*cameraDescriptor,		//Set 0
 	*cubemapDescriptor,		//Set 1
 	*cameraPosDescriptor,	//Set 2
 	*fogDescriptor
 	};
 	
-	std::vector<vk::DescriptorSet> bufferSets = {
+	std::vector<vk::DescriptorSet> cubeBuf_Refract = {
 	*cameraDescriptor,	
-	*ProjMatDescriptor,
-	*cameraPosDescriptor,	
+	*ViewMatRefractDescriptor,
+	*cameraPosDescriptor,
 	*farPlaneDescriptor	
 	};
 
-	DSv.push_back(objectSets);
-	DSv.push_back(objectSetsB);
-	DSv.push_back(skyboxSets);
-	DSv.push_back(skyboxSetsB);
-	DSv.push_back(waveSets);
-	DSv.push_back(waterSets);
-	DSv.push_back(bufferSets);
+	std::vector<vk::DescriptorSet> cubeBuf_Reflect = {
+	*cameraDescriptor,
+	*ViewMatReflectionDescriptor,
+	*cameraPosDescriptor,
+	*farPlaneDescriptor
+	};
+
+	DSv.push_back(objD);
+	DSv.push_back(objD_B_Refract);
+	DSv.push_back(objD_B_Reflect);
+	DSv.push_back(skyboxD);
+	DSv.push_back(skyboxD_B_Refract);
+	DSv.push_back(skyboxD_B_Reflect);
+	DSv.push_back(wavesD);
+	DSv.push_back(watervolD);
+	DSv.push_back(cubeBuf_Refract);
+	DSv.push_back(cubeBuf_Reflect);
 }
 
 void Dissertation::CreateSSBOBuffers(uint32_t width, uint32_t height) {
@@ -423,19 +487,38 @@ void Dissertation::CreteUniforms() {
 		.WithHostVisibility()
 		.Build(sizeof(float), "far plane uniform");
 
-	ProjMatUniform = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
+	ViewMatUniformRefract = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
 		.WithBufferUsage(vk::BufferUsageFlagBits::eUniformBuffer)
 		.WithHostVisibility()
-		.Build(sizeof(Matrix4)*6, "Proj matrix uniform");
+		.Build(sizeof(Matrix4) * 6, "Proj matrix uniform");
 
-	//camBafUniform = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
-	//	.WithBufferUsage(vk::BufferUsageFlagBits::eUniformBuffer)
-	//	.WithHostVisibility()
-	//	.Build(sizeof(camera), "buffer camera uniform");
+	ViewMatUniformReflect = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
+		.WithBufferUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+		.WithHostVisibility()
+		.Build(sizeof(Matrix4) * 6, "view matrix reflection uniform");
+
+	newViewcameraBufferUniform = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
+		.WithBufferUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+		.WithHostVisibility()
+		.Build(sizeof(Matrix4), "new view matrix uniform");
+
+	clippingPlaneUniform[0] = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
+		.WithBufferUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+		.WithHostVisibility()
+		.Build(sizeof(Vector4), "clipping plane uniform");
+
+	clippingPlaneUniform[1] = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
+		.WithBufferUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+		.WithHostVisibility()
+		.Build(sizeof(Vector4), "-clipping plane uniform");
 
 	Fog fogInfo;
 	Light lightInfo(Vector3(0, 150, -50), 100, Vector4(1.0, 1.0, 1.0, 1.0));
+	clippingPlane[0] = Vector4(0.0, 1.0, 0.0, 0.0);
+	clippingPlane[1] = Vector4(0.0, -1.0, 0.0, 0.0);
 
+	clippingPlaneUniform[0].CopyData((void*)&clippingPlane[0], sizeof(Vector4));
+	clippingPlaneUniform[1].CopyData((void*)&clippingPlane[1], sizeof(Vector4));
 	fogUniform.CopyData((void*)&fogInfo, sizeof(fogInfo));
 	lightUniform.CopyData((void*)&lightInfo, sizeof(lightInfo));
 	farPlaneUniform.CopyData((void*)&far_plane, sizeof(far_plane));
@@ -481,16 +564,10 @@ std::vector<std::vector<std::string>> Dissertation::readCSV(const std::string& f
 }
 
 void Dissertation::RenderFrame(float dt) {
-	cubeViewMat[0]=cubeProjMat * Matrix::lookAt(0, -90, camera.GetPosition());
-	cubeViewMat[1]=cubeProjMat * Matrix::lookAt(0, 90, camera.GetPosition());
-	cubeViewMat[2]=cubeProjMat * Matrix::lookAt(90, 0, camera.GetPosition());
-	cubeViewMat[3]=cubeProjMat * Matrix::lookAt(-90, 0, camera.GetPosition());
-	cubeViewMat[4]=cubeProjMat * Matrix::lookAt(0, 0, camera.GetPosition());
-	cubeViewMat[5]=cubeProjMat * Matrix::lookAt(0, 180, camera.GetPosition());
-	ProjMatUniform.CopyData((void*)cubeViewMat.data(), sizeof(Matrix4) * 6);
+	timeUniform.CopyData((void*)&runTime, sizeof(runTime));
 
-	//std::cout << "\n\n" << camera.GetPosition().x << ", " << camera.GetPosition().y << ", " << camera.GetPosition().z << "\n\n";
 	FillBufferCube();
+	FillBufferCubeUpSideDown();
 
 	TransitionColourToSampler(renderer->GetFrameState().cmdBuffer, *ssboTexDiffuse);
 	TransitionDepthToSampler(renderer->GetFrameState().cmdBuffer, *ssboTexDepth);
@@ -498,8 +575,6 @@ void Dissertation::RenderFrame(float dt) {
 	TransitionDepthToSampler(renderer->GetFrameState().cmdBuffer, *ssboTexDepth2);
 
 	renderer->BeginDefaultRendering(renderer->GetFrameState().cmdBuffer);
-
-	timeUniform.CopyData((void*)&runTime, sizeof(runTime));
 
 	DrawSkyBox(Pipelines::skyboxR, DSet::skyboxDS);
 	ColourCheck(Pipelines::objR, DSet::objDS);
@@ -518,10 +593,24 @@ void Dissertation::FillBufferCube() {
 	vk::Viewport newViewport = vk::Viewport(0.0f, (float)RENDERAREA, (float)RENDERAREA, -(float)RENDERAREA, 0.0f, 1.0f);
 	vk::Rect2D	 newScissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(RENDERAREA, RENDERAREA));
 
+	cubeViewMat[0] = cubeProjMat * Matrix::lookAt(0, -90, camera.GetPosition());
+	cubeViewMat[1] = cubeProjMat * Matrix::lookAt(0, 90, camera.GetPosition());
+	cubeViewMat[2] = cubeProjMat * Matrix::lookAt(90, 0, camera.GetPosition());
+	cubeViewMat[3] = cubeProjMat * Matrix::lookAt(-90, 0, camera.GetPosition());
+	cubeViewMat[4] = cubeProjMat * Matrix::lookAt(0, 0, camera.GetPosition());
+	cubeViewMat[5] = cubeProjMat * Matrix::lookAt(0, 180, camera.GetPosition());
+
+	ViewMatUniformRefract.CopyData((void*)cubeViewMat.data(), sizeof(Matrix4) * 6);
+	newCamPos = camera.GetPosition();
+	camPosUniform.CopyData(&newCamPos, sizeof(Vector3));
+
+	newView = Matrix::lookAt(camera.GetPitch(), camera.GetYaw(), camera.GetPosition());
+	newViewcameraBufferUniform.CopyData(&newView, sizeof(Matrix4));
+
 	frameState.cmdBuffer.beginRendering(
 		DynamicRenderBuilder()
 		.WithColourAttachment(*cubeFaceView[0], vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))//
-		.WithDepthAttachment(*cubeFaceView[1], vk::ImageLayout::eDepthAttachmentOptimal, true, {{1.0f}}, false)
+		.WithDepthAttachment(*cubeFaceView[1], vk::ImageLayout::eDepthAttachmentOptimal, true, { {1.0f} }, false)
 		.WithRenderArea(newScissor)
 		.WithLayerCount(6)
 		.Build()
@@ -530,20 +619,18 @@ void Dissertation::FillBufferCube() {
 
 	frameState.cmdBuffer.setViewport(0, 1, &newViewport);
 	frameState.cmdBuffer.setScissor(0, 1, &newScissor);
-	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer].size(), DSv[DSet::cubeBuffer].data(), 0, nullptr);
+	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer_Refract].size(), DSv[DSet::cubeBuffer_Refract].data(), 0, nullptr);
 
-	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B);
-	ColourCheck(Pipelines::objB, DSet::objDS_B);
+	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B_Refract);
+	ColourCheck(Pipelines::objB, DSet::objDS_B_Refract);
 
 	frameState.cmdBuffer.endRendering();
+}
 
-	cubeViewMat[0] = cubeProjMat * Matrix::lookAt(180, -90, camera.GetPosition());
-	cubeViewMat[1] = cubeProjMat * Matrix::lookAt(180, 90, camera.GetPosition());
-	cubeViewMat[2] = cubeProjMat * Matrix::lookAt(-90, 0, camera.GetPosition());
-	cubeViewMat[3] = cubeProjMat * Matrix::lookAt(90, 0, camera.GetPosition());
-	cubeViewMat[4] = cubeProjMat * Matrix::lookAt(180, 0, camera.GetPosition());
-	cubeViewMat[5] = cubeProjMat * Matrix::lookAt(180, -180, camera.GetPosition());
-	ProjMatUniform.CopyData((void*)cubeViewMat.data(), sizeof(Matrix4) * 6);
+void Dissertation::FillBufferCubeUpSideDown() {
+	FrameState const& frameState = renderer->GetFrameState();
+	vk::Viewport newViewport = vk::Viewport(0.0f, (float)RENDERAREA, (float)RENDERAREA, -(float)RENDERAREA, 0.0f, 1.0f);
+	vk::Rect2D	 newScissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(RENDERAREA, RENDERAREA));
 
 	frameState.cmdBuffer.beginRendering(
 		DynamicRenderBuilder()
@@ -555,22 +642,31 @@ void Dissertation::FillBufferCube() {
 	);
 	frameState.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[Pipelines::cubeBufferP]);
 	InvertCamera();
+	newView = Matrix::lookAt(-camera.GetPitch(), camera.GetYaw(), newCamPos);
+	newViewcameraBufferUniform.CopyData(&newView, sizeof(Matrix4));
+
+	cubeViewMatUpSideDown[0] = cubeProjMat * Matrix::lookAt(0, -90, newCamPos);	//cubeProjMat * Matrix::lookAt(180, -90, newCamPos);
+	cubeViewMatUpSideDown[1] = cubeProjMat * Matrix::lookAt(0, 90, newCamPos);	//cubeProjMat * Matrix::lookAt(180, 90, newCamPos);
+	cubeViewMatUpSideDown[2] = cubeProjMat * Matrix::lookAt(90, 0, newCamPos);	//cubeProjMat * Matrix::lookAt(-90, 180, newCamPos);
+	cubeViewMatUpSideDown[3] = cubeProjMat * Matrix::lookAt(-90, 0, newCamPos);	//cubeProjMat * Matrix::lookAt(90, 180, newCamPos);
+	cubeViewMatUpSideDown[4] = cubeProjMat * Matrix::lookAt(0, 0, newCamPos);	//cubeProjMat * Matrix::lookAt(180, 180, newCamPos);
+	cubeViewMatUpSideDown[5] = cubeProjMat * Matrix::lookAt(0, 180, newCamPos);	//cubeProjMat * Matrix::lookAt(180, 0, newCamPos);
+	ViewMatUniformReflect.CopyData((void*)cubeViewMatUpSideDown.data(), sizeof(Matrix4) * 6);
+
 	frameState.cmdBuffer.setViewport(0, 1, &newViewport);
 	frameState.cmdBuffer.setScissor(0, 1, &newScissor);
-	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer].size(), DSv[DSet::cubeBuffer].data(), 0, nullptr);
+	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer_Reflect].size(), DSv[DSet::cubeBuffer_Reflect].data(), 0, nullptr);
 
-	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B);
-	ColourCheck(Pipelines::objB, DSet::objDS_B);
-	
+	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B_Reflect); 
+	ColourCheck(Pipelines::objB, DSet::objDS_B_Reflect);
+
 	frameState.cmdBuffer.endRendering();
 	InvertCamera();
 }
 
 void Dissertation::InvertCamera() {
-	camera.SetPitch(camera.GetPitch() * -1);
-	//camera.SetYaw(camera.GetYaw() * -1);
-	float y = camera.GetPosition().y * -1;
-	camera.SetPosition(Vector3(-camera.GetPosition().x, -camera.GetPosition().y, -camera.GetPosition().z));
+	newCamPos = Vector3(camera.GetPosition().x, -camera.GetPosition().y, camera.GetPosition().z);
+	camPosUniform.CopyData(&newCamPos, sizeof(Vector3));
 }
 
 void Dissertation::UpdateDescriptors() {
@@ -584,7 +680,9 @@ void Dissertation::UpdateDescriptors() {
 	WriteImageDescriptor(renderer->GetDevice(), *ssboDescriptorDiffuse2, 0, ssboTexDiffuse2->GetDefaultView(), *defaultSampler);
 	ssboDescriptorDepth2 = CreateDescriptorSet(renderer->GetDevice(), renderer->GetDescriptorPool(), waveShader->GetLayout(13));
 	WriteImageDescriptor(renderer->GetDevice(), *ssboDescriptorDepth2, 0, ssboTexDepth2->GetDefaultView(), *defaultSampler, vk::ImageLayout::eDepthStencilReadOnlyOptimal);
-
+	
+	cameraPosDescriptor = CreateDescriptorSet(renderer->GetDevice(), renderer->GetDescriptorPool(), ssboThreeDBufferShader->GetLayout(2));
+	WriteBufferDescriptor(renderer->GetDevice(), *cameraPosDescriptor, 0, vk::DescriptorType::eUniformBuffer, camPosUniform);
 	//ssboDescriptor[0] = CreateDescriptorSet(renderer->GetDevice(), renderer->GetDescriptorPool(), waveShader->GetLayout(10));
 	//WriteImageDescriptor(renderer->GetDevice(), *ssboDescriptor[0], 0, bufferTextures[0]->GetDefaultView(), *defaultSampler);
 	//ssboDescriptor[1] = CreateDescriptorSet(renderer->GetDevice(), renderer->GetDescriptorPool(), waveShader->GetLayout(11));
@@ -597,16 +695,13 @@ void Dissertation::DrawSkyBox(const int num, const int DS) {
 
 	cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[num]);
 
-	Vector3 newCamPos = camera.GetPosition();
-	camPosUniform.CopyData(&newCamPos, sizeof(Vector3));
-
 	cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[num].layout, 0, DSv[DS].size(), DSv[DS].data(), 0, nullptr);
 	meshes[Meshes::quadM]->Draw(cmdBuffer);
 }
 
 void Dissertation::ColourCheck(const int numOfP, const int DS) {
 
-	Vector3 startpos = Vector3(-10, -100, -50);
+	Vector3 startpos = Vector3(-10, -110, -50);
 	Vector3 pos = startpos;
 
 	for (int i = 0; i < 3; i++) {
@@ -638,7 +733,8 @@ void Dissertation::ColourCheck(const int numOfP, const int DS) {
 
 			pos.x += radius * cos(radian);
 			pos.z += radius * sin(radian);
-			pos.y += 2*cos(runTime)-sin(runTime);
+			//pos.y += 2 * cos(runTime) - sin(runTime);
+			pos.y = 40 * cos(runTime) - sin(runTime);
 			DrawObj(pos, Vector3(3, 3, 3), Vector4(colours[i % colours.size()], 1), DS, numOfP, Meshes::sphereM);
 		}
 	}

@@ -17,6 +17,7 @@ layout (location = 3) in vec3 viewDir;
 layout (location = 0) out vec4 fragColor;
 
 layout (set  = 1, binding = 0) uniform  samplerCube skyTex;
+layout (set  = 4, binding = 0) uniform  samplerCube skyTexUnder;
 
 layout (set = 2, binding  = 0) uniform CameraPos 
 {
@@ -37,8 +38,7 @@ void main() {
 
    fragColor 	= texture(skyTex, viewDir);
 
-   // if(cameraPosition.y < 0.001){
-   //     vec3 fogCol = mix(fogColour[2].xyz, fragColor.xyz, 0.5);
-   //     fragColor.rgb = fogCol;
-   //}
+    if(cameraPosition.y > 0.001){	
+		fragColor 	= texture(skyTexUnder, viewDir);
+	}
 }

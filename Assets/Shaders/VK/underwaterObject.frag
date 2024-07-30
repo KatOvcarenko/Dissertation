@@ -188,7 +188,5 @@ void main() {
 	fragColor.rgb += c.rgb * lightCol.rgb * lambert;//* shadow 
     if(currentDepth<0)
         fragColor = mix(vec4(fogCol,1.0), c, visibility);
-    else
-        fragColor = c;
 	fragColor.a = 1.0;
 }

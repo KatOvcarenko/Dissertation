@@ -8,15 +8,16 @@ layout (location = 0) in vec4 fragPos[];
 layout (location = 1) in vec2 fragTexCoord[];
 layout (location = 2) in vec3 inNormal[];
 layout (location = 3) in vec3 inWorldPos[];
-layout (location = 4) in mat4 inViewMatrix[];
-
+layout (location = 4) in vec4 clipPosition[];
+layout (location = 5) in mat4 inViewMatrix[];
 
 layout (location = 0) out vec4 geomFragPos;
 layout (location = 1) out vec2 geomTexCoord;
 layout (location = 2) out vec4 FragPos;
 layout (location = 3) out vec3 outNormal;
 layout (location = 4) out vec3 outWorldPos;
-layout (location = 5) out mat4 outViewMatrix;
+layout (location = 5) out vec4 clipPositionOut;
+layout (location = 6) out mat4 outViewMatrix;
 
 layout (set = 1, binding = 0) uniform CubeMat
 {
@@ -36,6 +37,7 @@ void main()
              outWorldPos=inWorldPos[i];
              outViewMatrix =inViewMatrix[i];
              geomTexCoord = fragTexCoord[i];
+             clipPositionOut = clipPosition[i];
             gl_Position = cubeMatrixes[face] * FragPos;
             EmitVertex();
         }    

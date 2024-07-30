@@ -10,7 +10,7 @@ layout (location = 0) in vec3 TexCoord[];
 layout (location = 0) out vec4 FragPos;
 layout (location = 1) out vec3 texCoordOut;
 
-layout (set = 4, binding = 0) uniform CubeMat
+layout (set = 5, binding = 0) uniform CubeMat
 {
 	mat4 cubeMatrixes[6];
 };

@@ -27,6 +27,7 @@ const int NUM_OBJECTS = 4;
 //	vk::Device device = renderer->GetDevice();
 //
 //	shader = ShaderBuilder(device)
+// 
 //		.WithVertexBinary("OffsetUniformBuffer.vert.spv")
 //		.WithFragmentBinary("BasicUniformBuffer.frag.spv")
 //	.Build("Offset Uniform Buffer Usage!");

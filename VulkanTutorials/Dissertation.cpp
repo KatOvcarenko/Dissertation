@@ -78,6 +78,20 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 	CreteUniforms();
 	ShaderLoader();
 	CreateSSBOBuffers(window.GetScreenSize().x, window.GetScreenSize().y);
+
+	lookup_table = readCSV("C:/Users/c2065496/Documents/VulkanTutorials/lookupTable.csv");
+
+	lookupTableUniform = BufferBuilder(device, renderer->GetMemoryAllocator())
+		.WithBufferUsage(vk::BufferUsageFlagBits::eStorageBuffer)
+		.Build(sizeof(float) * lookup_table.size(), "lookup table uniform!");
+
+	lookupTableDescriptorLayout = DescriptorSetLayoutBuilder(device)
+		.WithStorageBuffers(0, 1,/* vk::ShaderStageFlagBits::eVertex |*/ vk::ShaderStageFlagBits::eCompute)
+		.Build("lookup table descriptor sets");
+
+	lookupTableDescriptor = CreateDescriptorSet(device, pool, *lookupTableDescriptorLayout);
+	WriteBufferDescriptor(device, *lookupTableDescriptor, 0, vk::DescriptorType::eStorageBuffer, lookupTableUniform);
+
 	PipelinesBuilder();
 
 	cubemapDescriptor = CreateDescriptorSet(device, pool, objectShader->GetLayout(1));
@@ -139,9 +153,9 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 		WriteImageDescriptor(device, *sandTexDescriptorSet[i], 0, sandTex[i]->GetDefaultView(), *defaultSampler);
 	}*/
 
-	lookup_table = readCSV("C:/Users/c2065496/Documents/VulkanTutorials/lookupTable.csv");
 	UpdateDescriptors();
 	CreteDescriptorSets();
+	CreateImageFromData();
 }
 
 void Dissertation::PipelinesBuilder() {
@@ -196,13 +210,10 @@ void Dissertation::PipelinesBuilder() {
 		.WithDepthAttachment(state.depthFormat, vk::CompareOp::eLessOrEqual, true, true)
 		.Build("Water Volume Pipeline Render");
 
-	/*ssboBufferPipeline = PipelineBuilder(device)
-		.WithVertexInputState(meshes[Meshes::cubeM]->GetVertexInputState())
-		.WithTopology(vk::PrimitiveTopology::eTriangleList)
-		.WithShader(ssboBufferShader)
-		.WithColourAttachment(bufferTextures[0]->GetFormat())
-		.WithDepthAttachment(bufferTextures[1]->GetFormat(), vk::CompareOp::eLessOrEqual, true, true)
-		.Build("ssbo Pipeline");*/
+	pipelines[Pipelines::lookupTableP] = ComputePipelineBuilder(device)
+		.WithShader(lookupTableShader)
+		.WithDescriptorSetLayout(0, *lookupTableDescriptorLayout)
+		.Build("lookup table Pipeline");
 
 	pipelines[Pipelines::cubeBufferP] = PipelineBuilder(device)
 		.WithVertexInputState(meshes[Meshes::quadM]->GetVertexInputState())
@@ -353,8 +364,6 @@ void Dissertation::CreateSSBOBuffers(uint32_t width, uint32_t height) {
 	ssboTexDiffuse = bufferCubeTex.BuildCubemap("buffer diffuse texture cube");
 	cubeFaceView[0] = GenImageView(&*ssboTexDiffuse, vk::ImageAspectFlagBits::eColor);
 
-	camera.GetPosition();//.SetPosition({ 0, 0, 0 }).SetFarPlane(5000.0f);
-
 	ssboTexDepth = bufferCubeTex
 		.WithUsages(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled)
 		.WithLayout(vk::ImageLayout::eDepthAttachmentOptimal)
@@ -433,15 +442,7 @@ void Dissertation::ShaderLoader() {
 		.WithFragmentBinary("WaterGerstnerWaves.frag.spv")
 		.Build("Wave Shader");
 
-	//groundShader = ShaderBuilder(device)
-	//	.WithVertexBinary(".vert.spv")
-	//	.WithFragmentBinary(".frag.spv")
-	//	.Build("Ground Shader");
-
-	//ssboBufferShader = ShaderBuilder(renderer->GetDevice())
-	//	.WithVertexBinary("BufferObj.vert.spv")
-	//	.WithFragmentBinary("BufferObj.frag.spv")
-	//	.Build("buffer Shader");
+	lookupTableShader = UniqueVulkanCompute(new VulkanCompute(renderer->GetDevice(), "lookupTable.comp.spv"));
 
 	ssboThreeDBufferShader = ShaderBuilder(renderer->GetDevice())
 		.WithVertexBinary("CubeBuffer.vert.spv")
@@ -513,7 +514,8 @@ void Dissertation::CreteUniforms() {
 		.Build(sizeof(Vector4), "-clipping plane uniform");
 
 	Fog fogInfo;
-	Light lightInfo(Vector3(0, 150, -50), 100, Vector4(1.0, 1.0, 1.0, 1.0));
+	Light lightInfo(Vector3(20, 150, -20), 100, Vector4(1.0, 1.0, 1.0, 1.0));
+
 	clippingPlane[0] = Vector4(0.0, 1.0, 0.0, 0.0);
 	clippingPlane[1] = Vector4(0.0, -1.0, 0.0, 0.0);
 
@@ -559,13 +561,26 @@ std::vector<std::vector<std::string>> Dissertation::readCSV(const std::string& f
 	//	}
 	//	std::cout << std::endl;
 	//}
-	
 	return data;
 }
 
-void Dissertation::RenderFrame(float dt) {
-	timeUniform.CopyData((void*)&runTime, sizeof(runTime));
+void Dissertation::CreateImageFromData() {
+	TextureBuilder imageCreateInfo(renderer->GetDevice(), renderer->GetMemoryAllocator());
 
+	{imageCreateInfo.UsingPool(renderer->GetCommandPool(CommandBuffer::Graphics))
+		.UsingQueue(renderer->GetQueue(CommandBuffer::Graphics))
+		.WithDimension(lookup_table.size(), lookup_table.size(), 1)
+		.WithMips(false)
+		.WithUsages(vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage)
+		.WithPipeFlags(vk::PipelineStageFlagBits2::eComputeShader)
+		.WithLayout(vk::ImageLayout::eUndefined)
+		.WithFormat(vk::Format::eR32G32B32A32Sfloat)
+		.WithAspects(vk::ImageAspectFlagBits::eColor);
+	}
+	imageCreateInfo.Build("lookup table tex create");
+}
+
+void Dissertation::RenderFrame(float dt) {
 	FillBufferCube();
 	FillBufferCubeUpSideDown();
 
@@ -592,20 +607,8 @@ void Dissertation::FillBufferCube() {
 	FrameState const& frameState = renderer->GetFrameState();
 	vk::Viewport newViewport = vk::Viewport(0.0f, (float)RENDERAREA, (float)RENDERAREA, -(float)RENDERAREA, 0.0f, 1.0f);
 	vk::Rect2D	 newScissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(RENDERAREA, RENDERAREA));
-
-	cubeViewMat[0] = cubeProjMat * Matrix::lookAt(0, -90, camera.GetPosition());
-	cubeViewMat[1] = cubeProjMat * Matrix::lookAt(0, 90, camera.GetPosition());
-	cubeViewMat[2] = cubeProjMat * Matrix::lookAt(90, 0, camera.GetPosition());
-	cubeViewMat[3] = cubeProjMat * Matrix::lookAt(-90, 0, camera.GetPosition());
-	cubeViewMat[4] = cubeProjMat * Matrix::lookAt(0, 0, camera.GetPosition());
-	cubeViewMat[5] = cubeProjMat * Matrix::lookAt(0, 180, camera.GetPosition());
-
-	ViewMatUniformRefract.CopyData((void*)cubeViewMat.data(), sizeof(Matrix4) * 6);
-	newCamPos = camera.GetPosition();
-	camPosUniform.CopyData(&newCamPos, sizeof(Vector3));
-
-	newView = Matrix::lookAt(camera.GetPitch(), camera.GetYaw(), camera.GetPosition());
-	newViewcameraBufferUniform.CopyData(&newView, sizeof(Matrix4));
+	
+	UpdateUniformsBufferRefract();
 
 	frameState.cmdBuffer.beginRendering(
 		DynamicRenderBuilder()
@@ -615,13 +618,15 @@ void Dissertation::FillBufferCube() {
 		.WithLayerCount(6)
 		.Build()
 	);
-	frameState.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[Pipelines::cubeBufferP]);
 
+	frameState.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[Pipelines::cubeBufferP]);
 	frameState.cmdBuffer.setViewport(0, 1, &newViewport);
 	frameState.cmdBuffer.setScissor(0, 1, &newScissor);
 	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer_Refract].size(), DSv[DSet::cubeBuffer_Refract].data(), 0, nullptr);
 
+	InvertCamera();
 	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B_Refract);
+	InvertCamera();
 	ColourCheck(Pipelines::objB, DSet::objDS_B_Refract);
 
 	frameState.cmdBuffer.endRendering();
@@ -632,6 +637,9 @@ void Dissertation::FillBufferCubeUpSideDown() {
 	vk::Viewport newViewport = vk::Viewport(0.0f, (float)RENDERAREA, (float)RENDERAREA, -(float)RENDERAREA, 0.0f, 1.0f);
 	vk::Rect2D	 newScissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(RENDERAREA, RENDERAREA));
 
+	InvertCamera();
+	UpdateUniformsBufferReflect();
+
 	frameState.cmdBuffer.beginRendering(
 		DynamicRenderBuilder()
 		.WithColourAttachment(*cubeFaceView[2], vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))//
@@ -641,7 +649,38 @@ void Dissertation::FillBufferCubeUpSideDown() {
 		.Build()
 	);
 	frameState.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[Pipelines::cubeBufferP]);
+	frameState.cmdBuffer.setViewport(0, 1, &newViewport);
+	frameState.cmdBuffer.setScissor(0, 1, &newScissor);
+	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer_Reflect].size(), DSv[DSet::cubeBuffer_Reflect].data(), 0, nullptr);
+
+	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B_Reflect); 
+	ColourCheck(Pipelines::objB, DSet::objDS_B_Reflect);
+
+	frameState.cmdBuffer.endRendering();
+
 	InvertCamera();
+}
+
+void Dissertation::UpdateUniformsBufferRefract() {
+	timeUniform.CopyData((void*)&runTime, sizeof(runTime));
+
+	newCamPos = camera.GetPosition();
+	camPosUniform.CopyData(&newCamPos, sizeof(Vector3));
+
+	cubeViewMat[0] = cubeProjMat * Matrix::lookAt(0, -90, newCamPos);
+	cubeViewMat[1] = cubeProjMat * Matrix::lookAt(0, 90, newCamPos);
+	cubeViewMat[2] = cubeProjMat * Matrix::lookAt(90, 0, newCamPos);
+	cubeViewMat[3] = cubeProjMat * Matrix::lookAt(-90, 0, newCamPos);
+	cubeViewMat[4] = cubeProjMat * Matrix::lookAt(0, 0, newCamPos);
+	cubeViewMat[5] = cubeProjMat * Matrix::lookAt(0, 180, newCamPos);
+
+	ViewMatUniformRefract.CopyData((void*)cubeViewMat.data(), sizeof(Matrix4) * 6);
+
+	newView = Matrix::lookAt(camera.GetPitch(), camera.GetYaw(), camera.GetPosition());
+	newViewcameraBufferUniform.CopyData(&newView, sizeof(Matrix4));
+}
+
+void Dissertation::UpdateUniformsBufferReflect() {
 	newView = Matrix::lookAt(-camera.GetPitch(), camera.GetYaw(), newCamPos);
 	newViewcameraBufferUniform.CopyData(&newView, sizeof(Matrix4));
 
@@ -652,16 +691,6 @@ void Dissertation::FillBufferCubeUpSideDown() {
 	cubeViewMatUpSideDown[4] = cubeProjMat * Matrix::lookAt(0, 0, newCamPos);	//cubeProjMat * Matrix::lookAt(180, 180, newCamPos);
 	cubeViewMatUpSideDown[5] = cubeProjMat * Matrix::lookAt(0, 180, newCamPos);	//cubeProjMat * Matrix::lookAt(180, 0, newCamPos);
 	ViewMatUniformReflect.CopyData((void*)cubeViewMatUpSideDown.data(), sizeof(Matrix4) * 6);
-
-	frameState.cmdBuffer.setViewport(0, 1, &newViewport);
-	frameState.cmdBuffer.setScissor(0, 1, &newScissor);
-	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer_Reflect].size(), DSv[DSet::cubeBuffer_Reflect].data(), 0, nullptr);
-
-	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B_Reflect); 
-	ColourCheck(Pipelines::objB, DSet::objDS_B_Reflect);
-
-	frameState.cmdBuffer.endRendering();
-	InvertCamera();
 }
 
 void Dissertation::InvertCamera() {

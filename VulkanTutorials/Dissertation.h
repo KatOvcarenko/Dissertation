@@ -26,6 +26,9 @@ namespace NCL::Rendering::Vulkan {
 		void UpdateDescriptors();
 		void CreteDescriptorSets();
 		void InvertCamera();
+		void UpdateUniformsBufferRefract();
+		void UpdateUniformsBufferReflect();
+		void CreateImageFromData();
 		vk::UniqueImageView GenImageView(VulkanTexture* tex, vk::ImageAspectFlags aspects);
 
 		int RENDERAREA;
@@ -45,6 +48,7 @@ namespace NCL::Rendering::Vulkan {
 		UniqueVulkanShader		groundShader;
 		UniqueVulkanShader		waveShader;
 		UniqueVulkanShader		ssboThreeDBufferShader;
+		UniqueVulkanCompute		lookupTableShader;
 
 		UniqueVulkanTexture		cubeTex;
 		UniqueVulkanTexture		cubeTex2;
@@ -70,6 +74,7 @@ namespace NCL::Rendering::Vulkan {
 		VulkanBuffer			ViewMatUniformRefract;
 		VulkanBuffer			ViewMatUniformReflect;
 		VulkanBuffer			clippingPlaneUniform[2];
+		VulkanBuffer			lookupTableUniform;
 
 		vk::UniqueDescriptorSet waveDescriptor[3];
 		vk::UniqueDescriptorSet timeDescriptor;
@@ -93,8 +98,10 @@ namespace NCL::Rendering::Vulkan {
 		vk::UniqueDescriptorSet ssboDescriptorDepth;
 		vk::UniqueDescriptorSet ssboDescriptorDiffuse2;
 		vk::UniqueDescriptorSet ssboDescriptorDepth2;
-		vk::UniqueDescriptorSet clippingPlaneDescriptor[2];
-
+		vk::UniqueDescriptorSet clippingPlaneDescriptor[2]; 
+		vk::UniqueDescriptorSet lookupTableDescriptor;
+		vk::UniqueDescriptorSetLayout lookupTableDescriptorLayout;
+		
 		Vector4 clippingPlane[2];
 		Vector3 newCamPos;
 		float far_plane;
@@ -159,6 +166,7 @@ namespace NCL::Rendering::Vulkan {
 			objB,			objR,
 			waveB,			waveR,
 			cubeBufferP,
+			lookupTableP,
 			totalP
 		};
 

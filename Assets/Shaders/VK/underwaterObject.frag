@@ -173,20 +173,15 @@ void main() {
     else
         fogCol = midCol;
 	
-	//vec3 worldDir = normalize(inWorldPos - cameraPosition);
-	//fragColor = colour * texture(cubeTex, reflect(worldDir,inNormal));
-	//vec4 a = vec4(fogCol,1.0) * vec4(colour.rgb,0.5);
-    //fragColor = mix(vec4(fogCol,0.5), colour, visibility); 
-
 	vec3 incident = normalize(lightPos - inWorldPos);
 	float lambert = max(0.0, dot(incident, inNormal)) * 0.9;
 
 	vec4 c = underwaterColour(colour.rgb, currentDepth);
 
-    //vec3 final
 	fragColor.rgb = c.rgb * 0.8f;//c.rgb * vec3(0.8, 0.8, 1.0); //
 	fragColor.rgb += c.rgb * lightCol.rgb * lambert;//* shadow 
-    if(currentDepth<0)
+    
+    if(currentDepth<2.0)
         fragColor = mix(vec4(fogCol,1.0), c, visibility);
 	fragColor.a = 1.0;
 }

@@ -37,11 +37,6 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 		"Cubemap/Daylight Box_Front.png", "Cubemap/Daylight Box_Back.png",
 		"Cubemap Texture!"
 	);
-	{sandTex[0] = LoadTexture("Ground/ground_0024_color_1k.jpg");
-	sandTex[1] = LoadTexture("Ground/ground_0024_normal_opengl_1k.png");
-	sandTex[2] = LoadTexture("Ground/ground_0024_roughness_1k.jpg");
-	sandTex[3] = LoadTexture("Ground/ground_0024_height_1k.png");
-	sandTex[4] = LoadTexture("Ground/ground_0024_ao_1k.jpg"); }
 	dudvmapTex = LoadTexture("DUDV_map2.png");
 	waterNormalTex = LoadTexture("normals_water.png");
 
@@ -83,7 +78,7 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 
 	lookupTableUniform = BufferBuilder(device, renderer->GetMemoryAllocator())
 		.WithBufferUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-		.Build(sizeof(float) * lookup_table.size(), "lookup table uniform!");
+		.Build(sizeof(float) * lookup_table.size()*2, "lookup table uniform!");
 
 	lookupTableDescriptorLayout = DescriptorSetLayoutBuilder(device)
 		.WithStorageBuffers(0, 1,/* vk::ShaderStageFlagBits::eVertex |*/ vk::ShaderStageFlagBits::eCompute)
@@ -104,6 +99,9 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 
 	WriteBufferDescriptor(device, *cameraDescriptor, 0, vk::DescriptorType::eUniformBuffer, cameraBuffer);
 	WriteBufferDescriptor(device, *cameraPosDescriptor, 0, vk::DescriptorType::eUniformBuffer, camPosUniform);
+
+	cameraPosDescriptorBufferSky = CreateDescriptorSet(device, pool, skyboxShaderB->GetLayout(2));
+	WriteBufferDescriptor(device, *cameraPosDescriptorBufferSky, 0, vk::DescriptorType::eUniformBuffer, camPosUniformSky);
 
 	for (int i = 0; i < 3; i++) {
 		waveDescriptor[i] = CreateDescriptorSet(device, pool, waveShader->GetLayout(i + 5));
@@ -273,7 +271,7 @@ void Dissertation::CreteDescriptorSets() {
 	std::vector<vk::DescriptorSet> skyboxD_B_Reflect = {
 	*cameraDescriptor, //Set 0
 	*cubemapDescriptor, //Set 1
-	*cameraPosDescriptor,//2
+	*cameraPosDescriptorBufferSky,//2
 	*fogDescriptor,//3
 	*cubemapDescriptor2,//4
 	*ViewMatReflectionDescriptorSky
@@ -457,6 +455,11 @@ void Dissertation::CreteUniforms() {
 		.WithHostVisibility()
 		.Build(sizeof(Vector3), "Camera Position");
 
+	camPosUniformSky = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
+		.WithBufferUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+		.WithHostVisibility()
+		.Build(sizeof(Vector3), "Camera Position reflect");
+
 	fogUniform = BufferBuilder(renderer->GetDevice(), renderer->GetMemoryAllocator())
 		.WithBufferUsage(vk::BufferUsageFlagBits::eUniformBuffer)
 		.WithHostVisibility()
@@ -577,7 +580,7 @@ void Dissertation::CreateImageFromData() {
 		.WithFormat(vk::Format::eR32G32B32A32Sfloat)
 		.WithAspects(vk::ImageAspectFlagBits::eColor);
 	}
-	imageCreateInfo.Build("lookup table tex create");
+	lookupTableTex = imageCreateInfo.Build("lookup table tex create");
 }
 
 void Dissertation::RenderFrame(float dt) {
@@ -624,9 +627,7 @@ void Dissertation::FillBufferCube() {
 	frameState.cmdBuffer.setScissor(0, 1, &newScissor);
 	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer_Refract].size(), DSv[DSet::cubeBuffer_Refract].data(), 0, nullptr);
 
-	InvertCamera();
 	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B_Refract);
-	InvertCamera();
 	ColourCheck(Pipelines::objB, DSet::objDS_B_Refract);
 
 	frameState.cmdBuffer.endRendering();
@@ -652,7 +653,7 @@ void Dissertation::FillBufferCubeUpSideDown() {
 	frameState.cmdBuffer.setViewport(0, 1, &newViewport);
 	frameState.cmdBuffer.setScissor(0, 1, &newScissor);
 	frameState.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[Pipelines::cubeBufferP].layout, 0, DSv[DSet::cubeBuffer_Reflect].size(), DSv[DSet::cubeBuffer_Reflect].data(), 0, nullptr);
-
+	
 	DrawSkyBox(Pipelines::skyboxB, DSet::skyboxDS_B_Reflect); 
 	ColourCheck(Pipelines::objB, DSet::objDS_B_Reflect);
 
@@ -690,6 +691,10 @@ void Dissertation::UpdateUniformsBufferReflect() {
 	cubeViewMatUpSideDown[3] = cubeProjMat * Matrix::lookAt(-90, 0, newCamPos);	//cubeProjMat * Matrix::lookAt(90, 180, newCamPos);
 	cubeViewMatUpSideDown[4] = cubeProjMat * Matrix::lookAt(0, 0, newCamPos);	//cubeProjMat * Matrix::lookAt(180, 180, newCamPos);
 	cubeViewMatUpSideDown[5] = cubeProjMat * Matrix::lookAt(0, 180, newCamPos);	//cubeProjMat * Matrix::lookAt(180, 0, newCamPos);
+	
+	newCamPos2 = camera.GetPosition();
+	camPosUniformSky.CopyData(&newCamPos2, sizeof(Vector3));
+
 	ViewMatUniformReflect.CopyData((void*)cubeViewMatUpSideDown.data(), sizeof(Matrix4) * 6);
 }
 

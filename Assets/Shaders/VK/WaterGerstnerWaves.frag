@@ -42,8 +42,6 @@ layout (set = 11, binding  = 0) uniform  samplerCube bufferTexDepthC;
 layout (set = 12, binding  = 0) uniform  samplerCube bufferTexDiffC2;
 layout (set = 13, binding  = 0) uniform  samplerCube bufferTexDepthC2;
 
-//layout (set = 14, binding = 0) uniform  samplerCube cubeTex;
-
 const float distortionStrength = 0.02;
 
 void main() {
@@ -52,8 +50,6 @@ void main() {
 
 	//dudv
 	vec2 distortion = (texture(dudvMap, vec2(inTexCoord.x*3 + time*0.3, inTexCoord.y*3 + time*0.3)).rg * 2.0 - 1.0) * distortionStrength;
-
-	//vec4 normalTexColdist = texture(normalTex, distortion);
 
 	vec4 positionRelativeToCam = viewMatrix * vec4(inWorldPos,1);
 	float distance = length(positionRelativeToCam.xyz);
@@ -64,7 +60,6 @@ void main() {
 	vec4 normalTexCol = texture(normalTex, (inTexCoord - distortion));// - 12.0/time  time/12.0
 	vec3 normal = vec3(normalTexCol.r * 2.0 - 1.0, normalTexCol.b, normalTexCol.g * 2.0 - 1.0);//* 2.0 - 1.0
 	normal = inNormal - normalize(normal*0.3);//normalize();//
-	//normal = vec3(0.0, 1.0, 0.0);//normalize(vec3(normal.x,normal.y,normal.z));// mix(inNormal,normal,0.5);
 	vec3 normals = vec3(0.0, 1.0, 0.0);
 
 	vec3 incident = normalize(lightPos - inWorldPos);
@@ -93,31 +88,37 @@ void main() {
 	vec3 refractedDir = reflect(incidentDir, waterNormal);
 	vec4 testRefract = colour * texture(bufferTexDiffC, refractedDir);
 	
-	vec4 sky = texture(cubeTex, reflect(worldDir,normal));
+	vec4 sky = texture(cubeTex, reflect(vec3(worldDir.x,-worldDir.y, worldDir.z), normals));
 
 	fragColor = mix(testReflect, testRefract, refractiveFactor); //reflect, refract
 	
+	//if(currentDepth > 0.0)
+		//fragColor = mix(sky, fragColor,  visibility);
+
     vec3 ambient = vec3(0.5,0.65,0.7) * lightCol.rgb;
     
-    vec3 norm = normalize(normal);
-    vec3 lightDir = normalize(lightPos - inWorldPos);
-    float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * lightCol.rgb;
+    vec3 norm		= normalize(normal);
+    vec3 lightDir	= normalize(lightPos - inWorldPos);
+    float diff		= max(dot(norm, lightDir), 0.0);
+    vec3 diffuse	= diff * lightCol.rgb;
     
-	vec3 viewDir = normalize ( cameraPosition - inWorldPos );
+	vec3 viewDir	= normalize ( cameraPosition - inWorldPos );
     vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 100);
-    vec3 specular = spec * lightCol.rgb;
+    float spec		= pow(max(dot(viewDir, reflectDir), 0.0), 100);
+    vec3 specular	= spec * lightCol.rgb;
     
     vec3 result = (ambient + diffuse + specular) * fragColor.rgb;
     fragColor = vec4(result, 1.0);
 
 	if(currentDepth < 0.0)
-		fragColor.rgb = mix(sky.rgb, fragColor.rgb, visibility);
+		visibility = visibility * 0.7;
 	else
-		fragColor.rgb = mix(vec3(0.3f, 0.6f, 0.8f), fragColor.rgb, visibility*0.5);
+		visibility = visibility * 0.3;
+
+	fragColor.rgb = mix(vec3(0.3f, 0.6f, 0.8f), fragColor.rgb, visibility);
+	
 
 	//vec3 normalizedNormal = normalize(normal);
     //vec3 color = vec3((normalizedNormal.x * 0.5) + 0.5, (normalizedNormal.y * 0.5) + 0.5, (normalizedNormal.z * 0.5) + 0.5);
-	//fragColor =  testReflect;//testRefract;//vec4(color, 1.0);//
+	//fragColor = testReflect;//vec4(color, 1.0);//sky;// testRefract;//
 }	

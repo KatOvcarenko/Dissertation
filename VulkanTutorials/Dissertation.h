@@ -28,7 +28,8 @@ namespace NCL::Rendering::Vulkan {
 		void InvertCamera();
 		void UpdateUniformsBufferRefract();
 		void UpdateUniformsBufferReflect();
-		void CreateImageFromData();
+		void CreateImageFromData();		
+		void CreateDescriptors();
 		vk::UniqueImageView GenImageView(VulkanTexture* tex, vk::ImageAspectFlags aspects);
 
 		int RENDERAREA;
@@ -54,7 +55,6 @@ namespace NCL::Rendering::Vulkan {
 		UniqueVulkanTexture		cubeTex2;
 		UniqueVulkanTexture		cubeTexs[2];
 		UniqueVulkanTexture		lookupTableTex;
-		UniqueVulkanTexture		sandTex[5];
 		UniqueVulkanTexture		rainbowTex; 
 		UniqueVulkanTexture		dudvmapTex;
 		UniqueVulkanTexture		waterNormalTex;
@@ -63,7 +63,8 @@ namespace NCL::Rendering::Vulkan {
 		UniqueVulkanTexture		ssboTexDiffuse2;
 		UniqueVulkanTexture		ssboTexDepth2;
 
-		VulkanBuffer			camPosUniform;		
+		VulkanBuffer			camPosUniform;
+		VulkanBuffer			camPosUniformSky;
 		VulkanBuffer			newViewcameraBufferUniform;
 		VulkanBuffer			fogUniform;
 		VulkanBuffer			lightUniform; 
@@ -88,7 +89,7 @@ namespace NCL::Rendering::Vulkan {
 		vk::UniqueDescriptorSet	sandTexDescriptorSet[5];
 		vk::UniqueDescriptorSet	cameraPosDescriptor;		
 		vk::UniqueDescriptorSet	newViewCameraDescriptor;
-		vk::UniqueDescriptorSet	cameraPosDescriptorBuffer;
+		vk::UniqueDescriptorSet	cameraPosDescriptorBufferSky;
 		vk::UniqueDescriptorSet fogDescriptor;
 		vk::UniqueDescriptorSet fogDescriptorSky;
 		vk::UniqueDescriptorSet lightDescriptor; 
@@ -104,6 +105,7 @@ namespace NCL::Rendering::Vulkan {
 		
 		Vector4 clippingPlane[2];
 		Vector3 newCamPos;
+		Vector3 newCamPos2;
 		float far_plane;
 		Matrix4 cubeProjMat;
 		Matrix4 newView;

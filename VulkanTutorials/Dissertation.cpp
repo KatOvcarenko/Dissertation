@@ -36,7 +36,13 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 		"Cubemap/Daylight Box_Top.png", "Cubemap/Daylight Box_Bottom.png",
 		"Cubemap/Daylight Box_Front.png", "Cubemap/Daylight Box_Back.png",
 		"Cubemap Texture!"
-	);
+	); 
+	/*cubeTex = LoadCubemap(
+		"Cubemap/bluecloud_ft.jpg", "Cubemap/bluecloud_bk.jpg",
+		"Cubemap/bluecloud_up.jpg", "Cubemap/bluecloud_dn.jpg",
+		"Cubemap/bluecloud_rt.jpg","Cubemap/bluecloud_lf.jpg", 
+		"Cubemap Texture!"
+	);*/
 	dudvmapTex = LoadTexture("DUDV_map2.png");
 	waterNormalTex = LoadTexture("normals_water.png");
 
@@ -145,11 +151,6 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 	clippingPlaneDescriptor[1] = CreateDescriptorSet(device, pool, objectShaderB->GetLayout(6));
 	WriteBufferDescriptor(device, *clippingPlaneDescriptor[0], 0, vk::DescriptorType::eUniformBuffer, clippingPlaneUniform[0]);
 	WriteBufferDescriptor(device, *clippingPlaneDescriptor[1], 0, vk::DescriptorType::eUniformBuffer, clippingPlaneUniform[1]);
-
-	/*for (int i = 0; i < 5; ++i) {
-		sandTexDescriptorSet[i] = CreateDescriptorSet(device, pool, shader->GetLayout(i));
-		WriteImageDescriptor(device, *sandTexDescriptorSet[i], 0, sandTex[i]->GetDefaultView(), *defaultSampler);
-	}*/
 
 	UpdateDescriptors();
 	CreteDescriptorSets();
@@ -758,7 +759,7 @@ void Dissertation::ColourCheck(const int numOfP, const int DS) {
 	int numCubes = colours.size();
 
 	for (int j = 0; j < 3; j++) {
-		pos = Vector3(-12, -100 + 40 * j, -70);
+		pos = Vector3(-12, -150 + 40 * j, -70);
 		pos.z -= j * 70; 
 
 		for (int i = 0; i < numCubes; i++) {
@@ -768,7 +769,7 @@ void Dissertation::ColourCheck(const int numOfP, const int DS) {
 			pos.x += radius * cos(radian);
 			pos.z += radius * sin(radian);
 			//pos.y += 2 * cos(runTime) - sin(runTime);
-			pos.y = 40 * cos(runTime) - sin(runTime);
+			pos.y = 100 * cos(runTime) - sin(runTime);
 			DrawObj(pos, Vector3(3, 3, 3), Vector4(colours[i % colours.size()], 1), DS, numOfP, Meshes::sphereM);
 		}
 	}

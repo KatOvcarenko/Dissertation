@@ -38,9 +38,6 @@ layout (set = 4, binding  = 0) uniform LightInfo
 layout(push_constant) uniform PushConstantFrag{
 	layout(offset = 64) vec4 colour;
 };
-//layout(push_constant) uniform PushConstantFrag{
-//	layout(offset = 128) vec4 colour;
-//};
 
 vec3 RGBtoHSV(vec3 rgb){
     float H,S,V;
@@ -101,7 +98,6 @@ float maxDepthColor(vec3 baseCol){
     float H = hsv.x;
     float S = hsv.y;
     float V = hsv.z;
-    //float normDepth;
     float maxDepth;
     if (baseCol.r == baseCol.g && baseCol.g == baseCol.b && (V == 1 || V ==0)) //white or black
 		H = 180;
@@ -115,23 +111,18 @@ float maxDepthColor(vec3 baseCol){
     else                            maxDepth = -10.0	* 1.0;
 
 	return maxDepth;
-    //normDepth = 1-clamp(currentDepth/maxDepth, 0.0, 1.0);
 }
 
 vec4 underwaterColour(vec3 baseCol, float currentDepth){
 	float normDepth;
     vec3 hsv = RGBtoHSV(baseCol.rgb);
-    //int x = int(hsv.x);
-    //int d = (-1) * int(currentDepth);
 	float maxDepth = maxDepthColor(baseCol);//lookupTable(x, d);//
     normDepth = 1-clamp(currentDepth/maxDepth, 0.0, 1.0);
 	
-	vec3 colourDepth ;//= HSVtoRGB(hsv);
+	vec3 colourDepth ;
 	if (baseCol.r != baseCol.g || baseCol.g != baseCol.b){
 		hsv.z = clamp(1 + normDepth - (hsv.z*0.99), 0.0, 1.0);
 		colourDepth = HSVtoRGB(hsv);
-		//if (hsv.z==0)
-			//colourDepth.b = 1-clamp(colourDepth.b + 0.1, 0.0, 0.1);
 		return vec4(colourDepth, 1.0);
 	}
 	

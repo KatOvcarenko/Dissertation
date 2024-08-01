@@ -59,7 +59,7 @@ void main() {
 
 	vec4 normalTexCol = texture(normalTex, (inTexCoord - distortion));// - 12.0/time  time/12.0
 	vec3 normal = vec3(normalTexCol.r * 2.0 - 1.0, normalTexCol.b, normalTexCol.g * 2.0 - 1.0);//* 2.0 - 1.0
-	normal = inNormal - normalize(normal*0.3);//normalize();//
+	normal = normalize(inNormal) - normalize(normal);//;//*0.3
 	vec3 normals = vec3(0.0, 1.0, 0.0);
 
 	vec3 incident = normalize(lightPos - inWorldPos);
@@ -88,13 +88,10 @@ void main() {
 	vec3 refractedDir = reflect(incidentDir, waterNormal);
 	vec4 testRefract = colour * texture(bufferTexDiffC, refractedDir);
 	
-	vec4 sky = texture(cubeTex, reflect(vec3(worldDir.x,-worldDir.y, worldDir.z), normals));
+	vec4 sky = texture(cubeTex, reflect(vec3(worldDir.x,-worldDir.y, worldDir.z), normal*0.5));
 
 	fragColor = mix(testReflect, testRefract, refractiveFactor); //reflect, refract
 	
-	//if(currentDepth > 0.0)
-		//fragColor = mix(sky, fragColor,  visibility);
-
     vec3 ambient = vec3(0.5,0.65,0.7) * lightCol.rgb;
     
     vec3 norm		= normalize(normal);
@@ -110,15 +107,15 @@ void main() {
     vec3 result = (ambient + diffuse + specular) * fragColor.rgb;
     fragColor = vec4(result, 1.0);
 
-	if(currentDepth < 0.0)
-		visibility = visibility * 0.7;
-	else
-		visibility = visibility * 0.3;
+	if(currentDepth > 0.0)
+		fragColor.rgb = mix(vec3(0.3f, 0.6f, 0.8f), fragColor.rgb, visibility);
 
-	fragColor.rgb = mix(vec3(0.3f, 0.6f, 0.8f), fragColor.rgb, visibility);
+	else
+		fragColor.rgb = mix(sky.rgb, fragColor.rgb, visibility);
+
 	
 
-	//vec3 normalizedNormal = normalize(normal);
+	//vec3 normalizedNormal = normalize(inNormal);
     //vec3 color = vec3((normalizedNormal.x * 0.5) + 0.5, (normalizedNormal.y * 0.5) + 0.5, (normalizedNormal.z * 0.5) + 0.5);
-	//fragColor = testReflect;//vec4(color, 1.0);//sky;// testRefract;//
+	//fragColor = vec4(color, 1.0);//sky;// testRefract;//testReflect;//
 }	

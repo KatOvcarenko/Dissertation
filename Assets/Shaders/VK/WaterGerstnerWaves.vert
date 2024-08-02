@@ -81,8 +81,7 @@ void main() {
 	wavePosition += gerstner(normalize(WaveA.dir), WaveA.step, WaveA.wLen, inPos.xyz, WaveA.speed, tangent,binormal);	
 	wavePosition += gerstner(normalize(WaveB.dir), WaveB.step, WaveB.wLen, inPos.xyz, WaveB.speed, tangent,binormal);	
 	wavePosition += gerstner(normalize(WaveC.dir), WaveC.step, WaveC.wLen, inPos.xyz, WaveC.speed, tangent,binormal);
-	wavePosition.y += PerlinNoise(vec2(wavePosition.x,wavePosition.z), time*1.2, 240.0, 15.0);
-	//wavePosition.y += PerlinNoise(vec2(wavePosition.x,wavePosition.z), time*0.5, 10.0, 1.5);
+	wavePosition.y += PerlinNoise(vec2(wavePosition.x,wavePosition.z), time*1.2, 160.0, 20.0);
 
 	tangent = normalize(tangent);
 	binormal = normalize(binormal);

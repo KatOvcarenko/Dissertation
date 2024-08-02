@@ -113,9 +113,7 @@ void main() {
 	else
 		fragColor.rgb = mix(sky.rgb, fragColor.rgb, visibility);
 
-	
-
 	//vec3 normalizedNormal = normalize(inNormal);
     //vec3 color = vec3((normalizedNormal.x * 0.5) + 0.5, (normalizedNormal.y * 0.5) + 0.5, (normalizedNormal.z * 0.5) + 0.5);
-	//fragColor = vec4(color, 1.0);//sky;// testRefract;//testReflect;//
+	//fragColor = vec4(color, 1.0);//sky;// testReflect;//testRefract;//
 }	

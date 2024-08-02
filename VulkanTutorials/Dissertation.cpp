@@ -37,36 +37,32 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 		"Cubemap/Daylight Box_Front.png", "Cubemap/Daylight Box_Back.png",
 		"Cubemap Texture!"
 	); 
-	/*cubeTex = LoadCubemap(
-		"Cubemap/bluecloud_ft.jpg", "Cubemap/bluecloud_bk.jpg",
-		"Cubemap/bluecloud_up.jpg", "Cubemap/bluecloud_dn.jpg",
-		"Cubemap/bluecloud_rt.jpg","Cubemap/bluecloud_lf.jpg", 
-		"Cubemap Texture!"
-	);*/
+
 	dudvmapTex = LoadTexture("DUDV_map2.png");
 	waterNormalTex = LoadTexture("normals_water.png");
 
-	RENDERAREA = window.GetScreenSize().x;//cubeTex->GetDimensions().x;//
+	RENDERAREA = cubeTex->GetDimensions().x;//window.GetScreenSize().x;//
 
 	camera.SetPosition({ 0, 10, 0 }).SetFarPlane(5000.0f);
 	far_plane = 4000.0;
 	cubeProjMat = Matrix::Perspective(1.0f, far_plane, 1, 90.f);
+	newCamPos = camera.GetPosition();
 
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , -90, camera.GetPosition()));
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , 90, camera.GetPosition()));
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(90 , 0, camera.GetPosition()));
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(-90, 0, camera.GetPosition()));
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , 0, camera.GetPosition()));
-	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , 180, camera.GetPosition()));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , -90, newCamPos));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , 90, newCamPos));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(90 , 0, newCamPos));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(-90, 0, newCamPos));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , 0, newCamPos));
+	cubeViewMat.push_back(cubeProjMat * Matrix::lookAt(0  , 180, newCamPos));
 
-	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(180, -90, camera.GetPosition()));
-	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(180, 90, camera.GetPosition()) );
-	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(-90, 180, camera.GetPosition()));
-	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(90, 180, camera.GetPosition()) );
-	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(180, 180, camera.GetPosition()));
-	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(180, 0, camera.GetPosition())  );
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(0  , -90, newCamPos));
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(0  , 90, newCamPos));
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(90 , 0, newCamPos));
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(-90, 0, newCamPos));
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(0  , 0, newCamPos));
+	cubeViewMatUpSideDown.push_back(cubeProjMat * Matrix::lookAt(0  , 180, newCamPos));
 
-	{colours.push_back(Vector3(0, 0, 0));
+	colours.push_back(Vector3(0, 0, 0));
 	colours.push_back(Vector3(1, 0, 0));
 	colours.push_back(Vector3(1, 0.5, 0));
 	colours.push_back(Vector3(1, 1, 0));
@@ -74,26 +70,36 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 	colours.push_back(Vector3(0, 1, 1));
 	colours.push_back(Vector3(0, 0, 1));
 	colours.push_back(Vector3(1, 0, 1));
-	colours.push_back(Vector3(1, 1, 1)); }
+	colours.push_back(Vector3(1, 1, 1)); 
 
 	CreteUniforms();
 	ShaderLoader();
 	CreateSSBOBuffers(window.GetScreenSize().x, window.GetScreenSize().y);
 
-	lookup_table = readCSV("C:/Users/c2065496/Documents/VulkanTutorials/lookupTable.csv");
+	//lookup_table = readCSV("C:/Users/c2065496/Documents/VulkanTutorials/lookupTable.csv");
 
-	lookupTableUniform = BufferBuilder(device, renderer->GetMemoryAllocator())
+	/*lookupTableUniform = BufferBuilder(device, renderer->GetMemoryAllocator())
 		.WithBufferUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-		.Build(sizeof(float) * lookup_table.size()*2, "lookup table uniform!");
+		.Build(sizeof(float) * lookup_table.size()*2, "lookup table uniform!");*/
 
-	lookupTableDescriptorLayout = DescriptorSetLayoutBuilder(device)
-		.WithStorageBuffers(0, 1,/* vk::ShaderStageFlagBits::eVertex |*/ vk::ShaderStageFlagBits::eCompute)
-		.Build("lookup table descriptor sets");
+	//lookupTableDescriptorLayout = DescriptorSetLayoutBuilder(device)
+	//	.WithStorageBuffers(0, 1,/* vk::ShaderStageFlagBits::eVertex |*/ vk::ShaderStageFlagBits::eCompute)
+	//	.Build("lookup table descriptor sets");
 
-	lookupTableDescriptor = CreateDescriptorSet(device, pool, *lookupTableDescriptorLayout);
-	WriteBufferDescriptor(device, *lookupTableDescriptor, 0, vk::DescriptorType::eStorageBuffer, lookupTableUniform);
+	//lookupTableDescriptor = CreateDescriptorSet(device, pool, *lookupTableDescriptorLayout);
+	//WriteBufferDescriptor(device, *lookupTableDescriptor, 0, vk::DescriptorType::eStorageBuffer, lookupTableUniform);
 
 	PipelinesBuilder();
+	CreateDescriptors();
+	UpdateDescriptors();
+	CreteDescriptorSets();
+	//CreateImageFromData();
+}
+
+void Dissertation::CreateDescriptors() {
+	FrameState const& state = renderer->GetFrameState();
+	vk::Device device = renderer->GetDevice();
+	vk::DescriptorPool pool = renderer->GetDescriptorPool();
 
 	cubemapDescriptor = CreateDescriptorSet(device, pool, objectShader->GetLayout(1));
 	WriteImageDescriptor(device, *cubemapDescriptor, 0, cubeTex->GetDefaultView(), *defaultSampler);
@@ -151,10 +157,6 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 	clippingPlaneDescriptor[1] = CreateDescriptorSet(device, pool, objectShaderB->GetLayout(6));
 	WriteBufferDescriptor(device, *clippingPlaneDescriptor[0], 0, vk::DescriptorType::eUniformBuffer, clippingPlaneUniform[0]);
 	WriteBufferDescriptor(device, *clippingPlaneDescriptor[1], 0, vk::DescriptorType::eUniformBuffer, clippingPlaneUniform[1]);
-
-	UpdateDescriptors();
-	CreteDescriptorSets();
-	CreateImageFromData();
 }
 
 void Dissertation::PipelinesBuilder() {
@@ -209,10 +211,10 @@ void Dissertation::PipelinesBuilder() {
 		.WithDepthAttachment(state.depthFormat, vk::CompareOp::eLessOrEqual, true, true)
 		.Build("Water Volume Pipeline Render");
 
-	pipelines[Pipelines::lookupTableP] = ComputePipelineBuilder(device)
+	/*pipelines[Pipelines::lookupTableP] = ComputePipelineBuilder(device)
 		.WithShader(lookupTableShader)
 		.WithDescriptorSetLayout(0, *lookupTableDescriptorLayout)
-		.Build("lookup table Pipeline");
+		.Build("lookup table Pipeline");*/
 
 	pipelines[Pipelines::cubeBufferP] = PipelineBuilder(device)
 		.WithVertexInputState(meshes[Meshes::quadM]->GetVertexInputState())
@@ -441,7 +443,7 @@ void Dissertation::ShaderLoader() {
 		.WithFragmentBinary("WaterGerstnerWaves.frag.spv")
 		.Build("Wave Shader");
 
-	lookupTableShader = UniqueVulkanCompute(new VulkanCompute(renderer->GetDevice(), "lookupTable.comp.spv"));
+	//lookupTableShader = UniqueVulkanCompute(new VulkanCompute(renderer->GetDevice(), "lookupTable.comp.spv"));
 
 	ssboThreeDBufferShader = ShaderBuilder(renderer->GetDevice())
 		.WithVertexBinary("CubeBuffer.vert.spv")
@@ -530,59 +532,59 @@ void Dissertation::CreteUniforms() {
 	farPlaneUniform.CopyData((void*)&far_plane, sizeof(far_plane));
 }
 
-std::vector<std::vector<std::string>> Dissertation::readCSV(const std::string& filePath) {
-	std::vector<std::vector<std::string>> data;
-	std::ifstream file(filePath);
+//std::vector<std::vector<std::string>> Dissertation::readCSV(const std::string& filePath) {
+//	std::vector<std::vector<std::string>> data;
+//	std::ifstream file(filePath);
+//
+//	if (!file.is_open()) {
+//		std::cerr << "Error: Could not open the file." << std::endl;
+//		return data;
+//	}
+//
+//	char bom[3];
+//	file.read(bom, 3);
+//	if (bom[0] != '\xEF' || bom[1] != '\xBB' || bom[2] != '\xBF') {
+//		file.seekg(0);
+//	}
+//
+//	std::string line;
+//	while (std::getline(file, line)) {
+//		std::vector<std::string> row;
+//		std::stringstream ss(line);
+//		std::string value;
+//
+//		while (std::getline(ss, value, ',')) {
+//			row.push_back(value);
+//		}
+//
+//		data.push_back(row);
+//	}
+//
+//	file.close();
+//	//for (const auto& row : data) {
+//	//	for (const auto& value : row) {
+//	//		std::cout << value << " "; 
+//	//	}
+//	//	std::cout << std::endl;
+//	//}
+//	return data;
+//}
 
-	if (!file.is_open()) {
-		std::cerr << "Error: Could not open the file." << std::endl;
-		return data;
-	}
-
-	char bom[3];
-	file.read(bom, 3);
-	if (bom[0] != '\xEF' || bom[1] != '\xBB' || bom[2] != '\xBF') {
-		file.seekg(0);
-	}
-
-	std::string line;
-	while (std::getline(file, line)) {
-		std::vector<std::string> row;
-		std::stringstream ss(line);
-		std::string value;
-
-		while (std::getline(ss, value, ',')) {
-			row.push_back(value);
-		}
-
-		data.push_back(row);
-	}
-
-	file.close();
-	//for (const auto& row : data) {
-	//	for (const auto& value : row) {
-	//		std::cout << value << " "; 
-	//	}
-	//	std::cout << std::endl;
-	//}
-	return data;
-}
-
-void Dissertation::CreateImageFromData() {
-	TextureBuilder imageCreateInfo(renderer->GetDevice(), renderer->GetMemoryAllocator());
-
-	{imageCreateInfo.UsingPool(renderer->GetCommandPool(CommandBuffer::Graphics))
-		.UsingQueue(renderer->GetQueue(CommandBuffer::Graphics))
-		.WithDimension(lookup_table.size(), lookup_table.size(), 1)
-		.WithMips(false)
-		.WithUsages(vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage)
-		.WithPipeFlags(vk::PipelineStageFlagBits2::eComputeShader)
-		.WithLayout(vk::ImageLayout::eUndefined)
-		.WithFormat(vk::Format::eR32G32B32A32Sfloat)
-		.WithAspects(vk::ImageAspectFlagBits::eColor);
-	}
-	lookupTableTex = imageCreateInfo.Build("lookup table tex create");
-}
+//void Dissertation::CreateImageFromData() {
+//	TextureBuilder imageCreateInfo(renderer->GetDevice(), renderer->GetMemoryAllocator());
+//
+//	{imageCreateInfo.UsingPool(renderer->GetCommandPool(CommandBuffer::Graphics))
+//		.UsingQueue(renderer->GetQueue(CommandBuffer::Graphics))
+//		.WithDimension(lookup_table.size(), lookup_table.size(), 1)
+//		.WithMips(false)
+//		.WithUsages(vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage)
+//		.WithPipeFlags(vk::PipelineStageFlagBits2::eComputeShader)
+//		.WithLayout(vk::ImageLayout::eUndefined)
+//		.WithFormat(vk::Format::eR32G32B32A32Sfloat)
+//		.WithAspects(vk::ImageAspectFlagBits::eColor);
+//	}
+//	lookupTableTex = imageCreateInfo.Build("lookup table tex create");
+//}
 
 void Dissertation::RenderFrame(float dt) {
 	FillBufferCube();
@@ -678,7 +680,7 @@ void Dissertation::UpdateUniformsBufferRefract() {
 
 	ViewMatUniformRefract.CopyData((void*)cubeViewMat.data(), sizeof(Matrix4) * 6);
 
-	newView = Matrix::lookAt(camera.GetPitch(), camera.GetYaw(), camera.GetPosition());
+	newView = Matrix::lookAt(camera.GetPitch(), camera.GetYaw(), newCamPos);
 	newViewcameraBufferUniform.CopyData(&newView, sizeof(Matrix4));
 }
 
@@ -700,7 +702,7 @@ void Dissertation::UpdateUniformsBufferReflect() {
 }
 
 void Dissertation::InvertCamera() {
-	newCamPos = Vector3(camera.GetPosition().x, -camera.GetPosition().y, camera.GetPosition().z);
+	newCamPos = Vector3(newCamPos.x, -camera.GetPosition().y, newCamPos.z);
 	camPosUniform.CopyData(&newCamPos, sizeof(Vector3));
 }
 
@@ -736,7 +738,7 @@ void Dissertation::DrawSkyBox(const int num, const int DS) {
 
 void Dissertation::ColourCheck(const int numOfP, const int DS) {
 
-	Vector3 startpos = Vector3(-10, -110, -50);
+	Vector3 startpos = Vector3(-10, -105, -50);
 	Vector3 pos = startpos;
 
 	for (int i = 0; i < 3; i++) {
@@ -769,7 +771,7 @@ void Dissertation::ColourCheck(const int numOfP, const int DS) {
 			pos.x += radius * cos(radian);
 			pos.z += radius * sin(radian);
 			//pos.y += 2 * cos(runTime) - sin(runTime);
-			pos.y = 100 * cos(runTime) - sin(runTime);
+			pos.y = 100 * cos(runTime+(j+1*0.5)) - sin(runTime + (j + 1 * 0.5));
 			DrawObj(pos, Vector3(3, 3, 3), Vector4(colours[i % colours.size()], 1), DS, numOfP, Meshes::sphereM);
 		}
 	}

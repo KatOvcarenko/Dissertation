@@ -128,10 +128,9 @@ vec4 underwaterColour(vec3 baseCol, float currentDepth){
 	
     colourDepth = HSVtoRGB(hsv);
 
-	if (hsv.z==0) //black
-		colourDepth.b = clamp(1.0-colourDepth.b - normDepth, 0.0, 0.01);
-	else if (hsv.y ==0 && hsv.z==1){ //white
+	if (hsv.y ==0 && hsv.z==1){ //white
 		colourDepth.rg = 1-clamp(colourDepth.rg - normDepth, 0.0, 1.0);
+		colourDepth.b = 1-clamp(colourDepth.b - normDepth, 0.1, 0.9);
 	}
 
 	return vec4(colourDepth, 1.0);

@@ -28,7 +28,7 @@ namespace NCL::Rendering::Vulkan {
 		void InvertCamera();
 		void UpdateUniformsBufferRefract();
 		void UpdateUniformsBufferReflect();
-		void CreateImageFromData();		
+		//void CreateImageFromData();		
 		void CreateDescriptors();
 		vk::UniqueImageView GenImageView(VulkanTexture* tex, vk::ImageAspectFlags aspects);
 
@@ -37,8 +37,8 @@ namespace NCL::Rendering::Vulkan {
 		vk::UniqueImageView		cubeFaceView[4];
 		PerspectiveCamera		BCamera;
 
-		std::vector<std::vector<std::string>> readCSV(const std::string& filePath);
-		std::vector<std::vector<std::string>> lookup_table;
+		//std::vector<std::vector<std::string>> readCSV(const std::string& filePath);
+		//std::vector<std::vector<std::string>> lookup_table;
 		std::vector<Vector3> colours;
 
 		UniqueVulkanShader		waterVolumeShader;
@@ -49,12 +49,12 @@ namespace NCL::Rendering::Vulkan {
 		UniqueVulkanShader		groundShader;
 		UniqueVulkanShader		waveShader;
 		UniqueVulkanShader		ssboThreeDBufferShader;
-		UniqueVulkanCompute		lookupTableShader;
+		//UniqueVulkanCompute		lookupTableShader;
 
 		UniqueVulkanTexture		cubeTex;
 		UniqueVulkanTexture		cubeTex2;
 		UniqueVulkanTexture		cubeTexs[2];
-		UniqueVulkanTexture		lookupTableTex;
+		//UniqueVulkanTexture		lookupTableTex;
 		UniqueVulkanTexture		rainbowTex; 
 		UniqueVulkanTexture		dudvmapTex;
 		UniqueVulkanTexture		waterNormalTex;
@@ -75,7 +75,7 @@ namespace NCL::Rendering::Vulkan {
 		VulkanBuffer			ViewMatUniformRefract;
 		VulkanBuffer			ViewMatUniformReflect;
 		VulkanBuffer			clippingPlaneUniform[2];
-		VulkanBuffer			lookupTableUniform;
+		//VulkanBuffer			lookupTableUniform;
 
 		vk::UniqueDescriptorSet waveDescriptor[3];
 		vk::UniqueDescriptorSet timeDescriptor;
@@ -100,7 +100,7 @@ namespace NCL::Rendering::Vulkan {
 		vk::UniqueDescriptorSet ssboDescriptorDiffuse2;
 		vk::UniqueDescriptorSet ssboDescriptorDepth2;
 		vk::UniqueDescriptorSet clippingPlaneDescriptor[2]; 
-		vk::UniqueDescriptorSet lookupTableDescriptor;
+		//vk::UniqueDescriptorSet lookupTableDescriptor;
 		vk::UniqueDescriptorSetLayout lookupTableDescriptorLayout;
 		
 		Vector4 clippingPlane[2];
@@ -168,7 +168,7 @@ namespace NCL::Rendering::Vulkan {
 			objB,			objR,
 			waveB,			waveR,
 			cubeBufferP,
-			lookupTableP,
+			//lookupTableP,
 			totalP
 		};
 

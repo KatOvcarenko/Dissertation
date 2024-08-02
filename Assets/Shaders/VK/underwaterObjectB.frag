@@ -127,12 +127,10 @@ vec4 underwaterColour(vec3 baseCol, float currentDepth){
 	float maxDepth = maxDepthColor(baseCol);//lookupTable(x, d);//
     normDepth = 1-clamp(currentDepth/maxDepth, 0.0, 1.0);
 	
-	vec3 colourDepth ;//= HSVtoRGB(hsv);
+	vec3 colourDepth;
 	if (baseCol.r != baseCol.g || baseCol.g != baseCol.b){
 		hsv.z = clamp(1 + normDepth - (hsv.z*0.99), 0.0, 1.0);
 		colourDepth = HSVtoRGB(hsv);
-		//if (hsv.z==0)
-			//colourDepth.b = 1-clamp(colourDepth.b + 0.1, 0.0, 0.1);
 		return vec4(colourDepth, 1.0);
 	}
 	

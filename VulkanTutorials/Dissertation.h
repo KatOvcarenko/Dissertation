@@ -16,7 +16,6 @@ namespace NCL::Rendering::Vulkan {
 		void DrawWaves(const int pipeline = 0);
 		void CreteUniforms();
 		void ShaderLoader(); 
-		void DrawWaterVolume(const Vector3& translation, const Vector3& scale, const Vector4& colour, const float angle = 0, const Vector3& axis = Vector3(1, 0, 0), const int pipeline = 0);
 		void ColourCheck(const int numOfP = 0, const int DS = 0);
 		void DrawSkyBox(const int num = 0, const int DS = 2);
 		void CreateSSBOBuffers(uint32_t width, uint32_t height);
@@ -41,7 +40,6 @@ namespace NCL::Rendering::Vulkan {
 		//std::vector<std::vector<std::string>> lookup_table;
 		std::vector<Vector3> colours;
 
-		UniqueVulkanShader		waterVolumeShader;
 		UniqueVulkanShader		skyboxShader;
 		UniqueVulkanShader		skyboxShaderB;
 		UniqueVulkanShader		objectShader;
@@ -163,8 +161,7 @@ namespace NCL::Rendering::Vulkan {
 		UniqueVulkanMesh	meshes[totalM];
 
 		enum Pipelines {
-			waterVolumeB,	waterVolumeR, //B - buffer, R - render
-			skyboxB,		skyboxR,
+			skyboxB,		skyboxR,	//B - buffer, R - render
 			objB,			objR,
 			waveB,			waveR,
 			cubeBufferP,
@@ -178,7 +175,6 @@ namespace NCL::Rendering::Vulkan {
 			objDS,		objDS_B_Refract,	objDS_B_Reflect,
 			skyboxDS,	skyboxDS_B_Refract, skyboxDS_B_Reflect,
 			wavesDS,	
-			watervolDS,
 						cubeBuffer_Refract,	cubeBuffer_Reflect
 		};
 

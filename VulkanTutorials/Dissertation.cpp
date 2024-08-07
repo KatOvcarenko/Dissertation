@@ -43,7 +43,7 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 
 	RENDERAREA = cubeTex->GetDimensions().x;//window.GetScreenSize().x;//
 
-	camera.SetPosition({ 0, 10, 0 }).SetFarPlane(5000.0f);
+	camera.SetPosition({ 0, 20, 0 }).SetFarPlane(5000.0f);
 	far_plane = 4000.0;
 	cubeProjMat = Matrix::Perspective(1.0f, far_plane, 1, 90.f);
 	newCamPos = camera.GetPosition();
@@ -88,6 +88,13 @@ Dissertation::Dissertation(Window& window) : VulkanTutorial(window) {
 
 	//lookupTableDescriptor = CreateDescriptorSet(device, pool, *lookupTableDescriptorLayout);
 	//WriteBufferDescriptor(device, *lookupTableDescriptor, 0, vk::DescriptorType::eStorageBuffer, lookupTableUniform);
+	
+	//lookupTableShader = UniqueVulkanCompute(new VulkanCompute(renderer->GetDevice(), "lookupTable.comp.spv"));
+
+	/*pipelines[Pipelines::lookupTableP] = ComputePipelineBuilder(device)
+	.WithShader(lookupTableShader)
+	.WithDescriptorSetLayout(0, *lookupTableDescriptorLayout)
+	.Build("lookup table Pipeline");*/
 
 	PipelinesBuilder();
 	CreateDescriptors();
@@ -203,19 +210,6 @@ void Dissertation::PipelinesBuilder() {
 		.WithDepthAttachment(state.depthFormat, vk::CompareOp::eLessOrEqual, true, true)
 		.Build("object Pipeline Render"); 
 
-	pipelines[Pipelines::waterVolumeR]= PipelineBuilder(device)
-		.WithVertexInputState(meshes[Meshes::cubeM]->GetVertexInputState())
-		.WithTopology(meshes[Meshes::cubeM]->GetVulkanTopology())
-		.WithShader(waterVolumeShader)
-		.WithColourAttachment(state.colourFormat)
-		.WithDepthAttachment(state.depthFormat, vk::CompareOp::eLessOrEqual, true, true)
-		.Build("Water Volume Pipeline Render");
-
-	/*pipelines[Pipelines::lookupTableP] = ComputePipelineBuilder(device)
-		.WithShader(lookupTableShader)
-		.WithDescriptorSetLayout(0, *lookupTableDescriptorLayout)
-		.Build("lookup table Pipeline");*/
-
 	pipelines[Pipelines::cubeBufferP] = PipelineBuilder(device)
 		.WithVertexInputState(meshes[Meshes::quadM]->GetVertexInputState())
 		.WithTopology(meshes[Meshes::quadM]->GetVulkanTopology())
@@ -296,13 +290,6 @@ void Dissertation::CreteDescriptorSets() {
 	*ssboDescriptorDiffuse2,
 	*ssboDescriptorDepth2
 	};
-
-	std::vector<vk::DescriptorSet> watervolD = {
-	*cameraDescriptor,		//Set 0
-	*cubemapDescriptor,		//Set 1
-	*cameraPosDescriptor,	//Set 2
-	*fogDescriptor
-	};
 	
 	std::vector<vk::DescriptorSet> cubeBuf_Refract = {
 	*cameraDescriptor,	
@@ -325,7 +312,6 @@ void Dissertation::CreteDescriptorSets() {
 	DSv.push_back(skyboxD_B_Refract);
 	DSv.push_back(skyboxD_B_Reflect);
 	DSv.push_back(wavesD);
-	DSv.push_back(watervolD);
 	DSv.push_back(cubeBuf_Refract);
 	DSv.push_back(cubeBuf_Reflect);
 }
@@ -433,17 +419,10 @@ void Dissertation::ShaderLoader() {
 		.WithFragmentBinary("underwaterObjectB.frag.spv")
 		.Build("obj Shader buffer");
 
-	waterVolumeShader = ShaderBuilder(renderer->GetDevice())
-		.WithVertexBinary("WaterVolume.vert.spv")
-		.WithFragmentBinary("WaterVolume.frag.spv")
-		.Build("WaterVolume Shader");
-
 	waveShader = ShaderBuilder(renderer->GetDevice())
 		.WithVertexBinary("WaterGerstnerWaves.vert.spv")
 		.WithFragmentBinary("WaterGerstnerWaves.frag.spv")
 		.Build("Wave Shader");
-
-	//lookupTableShader = UniqueVulkanCompute(new VulkanCompute(renderer->GetDevice(), "lookupTable.comp.spv"));
 
 	ssboThreeDBufferShader = ShaderBuilder(renderer->GetDevice())
 		.WithVertexBinary("CubeBuffer.vert.spv")
@@ -618,7 +597,7 @@ void Dissertation::FillBufferCube() {
 
 	frameState.cmdBuffer.beginRendering(
 		DynamicRenderBuilder()
-		.WithColourAttachment(*cubeFaceView[0], vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))//
+		.WithColourAttachment(*cubeFaceView[0], vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))
 		.WithDepthAttachment(*cubeFaceView[1], vk::ImageLayout::eDepthAttachmentOptimal, true, { {1.0f} }, false)
 		.WithRenderArea(newScissor)
 		.WithLayerCount(6)
@@ -646,7 +625,7 @@ void Dissertation::FillBufferCubeUpSideDown() {
 
 	frameState.cmdBuffer.beginRendering(
 		DynamicRenderBuilder()
-		.WithColourAttachment(*cubeFaceView[2], vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))//
+		.WithColourAttachment(*cubeFaceView[2], vk::ImageLayout::eColorAttachmentOptimal, true, vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f))
 		.WithDepthAttachment(*cubeFaceView[3], vk::ImageLayout::eDepthAttachmentOptimal, true, { {1.0f} }, false)
 		.WithRenderArea(newScissor)
 		.WithLayerCount(6)
@@ -661,8 +640,6 @@ void Dissertation::FillBufferCubeUpSideDown() {
 	ColourCheck(Pipelines::objB, DSet::objDS_B_Reflect);
 
 	frameState.cmdBuffer.endRendering();
-
-	InvertCamera();
 }
 
 void Dissertation::UpdateUniformsBufferRefract() {
@@ -802,30 +779,6 @@ void Dissertation::DrawObj(const Vector3& translation, const Vector3& scale, con
 	meshes[meshName]->Draw(cmdBuffer);
 }
 
-void Dissertation::DrawWaterVolume(const Vector3& translation, const Vector3& scale, const Vector4& colour, const float angle, const Vector3& axis, const int pipeline) {
-
-	FrameState const& frameState = renderer->GetFrameState();
-	vk::CommandBuffer cmdBuffer = frameState.cmdBuffer;
-	vk::Device device = renderer->GetDevice();
-
-	Matrix4 objectModelMatrix = Matrix::Translation(translation) * Matrix::Rotation(angle, axis) * Matrix::Scale(scale);
-
-	cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines[pipeline]);
-	cmdBuffer.pushConstants(*pipelines[pipeline].layout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(Matrix4), (void*)&objectModelMatrix);
-	cmdBuffer.pushConstants(*pipelines[pipeline].layout, vk::ShaderStageFlagBits::eFragment, sizeof(Matrix4), sizeof(colour), (void*)&colour);
-
-	vk::DescriptorSet objectSets[] = {
-		*cameraDescriptor,		//Set 0
-		*cubemapDescriptor,		//Set 1
-		*cameraPosDescriptor,	//Set 2
-		*fogDescriptor
-	};
-
-	cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[pipeline].layout, 0, sizeof(objectSets) / sizeof(objectSets[0]), objectSets, 0, nullptr);
-
-	meshes[Meshes::cubeM]->Draw(cmdBuffer);
-}
-
 void Dissertation::DrawWaves(const int pipeline) {
 	FrameState const& frameState = renderer->GetFrameState();
 	vk::CommandBuffer cmdBuffer = frameState.cmdBuffer;
@@ -837,23 +790,6 @@ void Dissertation::DrawWaves(const int pipeline) {
 	cmdBuffer.pushConstants(*pipelines[pipeline].layout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(Matrix4), (void*)&objectModelMatrix);
 	cmdBuffer.pushConstants(*pipelines[pipeline].layout, vk::ShaderStageFlagBits::eFragment, sizeof(Matrix4), sizeof(colour), (void*)&colour);
 
-	//vk::DescriptorSet objectSets[] = {
-	//	*cameraDescriptor,		//Set 0
-	//	*cubemapDescriptor,		//Set 1
-	//	*cameraPosDescriptor,	//Set 2
-	//	*dudvTexDescriptor,		//Set 3	
-	//	*lightDescriptor,
-	//	*waveDescriptor[0],
-	//	*waveDescriptor[1],
-	//	*waveDescriptor[2],
-	//	*timeDescriptor,
-	//	*waterNormalTexDescriptor,
-	//	//*ssboDescriptor[0],
-	//	//*ssboDescriptor[1],
-	//	*ssboDescriptorDiffuse,
-	//	*ssboDescriptorDepth
-	//};
-	//cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[pipeline].layout, 0, sizeof(objectSets) / sizeof(objectSets[0]), objectSets, 0, nullptr);
 	cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelines[pipeline].layout, 0, DSv[DSet::wavesDS].size(), DSv[DSet::wavesDS].data(), 0, nullptr);
 
 	meshes[Meshes::gridM]->Draw(cmdBuffer);

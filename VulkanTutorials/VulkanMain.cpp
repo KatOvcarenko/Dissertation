@@ -51,6 +51,7 @@ using namespace Vulkan;
 
 int main() {
 	Window* w = Window::CreateGameWindow("Dissertation", 1120, 768);
+	//Window* w = Window::CreateGameWindow("Dissertation", 1920, 1200);
 
 	if (!w->HasInitialised()) {
 		return -1;

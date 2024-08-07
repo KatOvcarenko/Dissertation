@@ -59,7 +59,8 @@ void main() {
 
 	vec4 normalTexCol = texture(normalTex, (inTexCoord - distortion));// - 12.0/time  time/12.0
 	vec3 normal = vec3(normalTexCol.r * 2.0 - 1.0, normalTexCol.b, normalTexCol.g * 2.0 - 1.0);//* 2.0 - 1.0
-	normal = normalize(inNormal) - normalize(normal);//;//*0.3
+	normal = normalize(inNormal) - normalize(normal);//*0.3;//
+	
 	vec3 normals = vec3(0.0, 1.0, 0.0);
 
 	vec3 incident = normalize(lightPos - inWorldPos);
@@ -72,8 +73,15 @@ void main() {
 		toCamVec =  cameraPosition - inWorldPos;
 	vec3 viewVec = normalize(toCamVec);
 
-	float refractiveFactor = dot(viewVec, normals);
-	refractiveFactor = pow(refractiveFactor, 3.0);
+	//fresnel effect
+	float refractiveFactor1 = dot(viewVec, normal);
+	refractiveFactor1 = pow(refractiveFactor1, 0.05);
+	refractiveFactor1 = clamp((refractiveFactor1 * 0.5) + 0.5, 0.01, 1.0);
+
+	float refractiveFactor2 = dot(viewVec, normals);
+	refractiveFactor2 = pow(refractiveFactor2, 0.05);
+
+	float refractiveFactor = mix( refractiveFactor2, refractiveFactor1, 0.5);
 
 	vec3 incidentDir = normalize(vec3(worldDir.x,-worldDir.y, -worldDir.z));
 	incidentDir.x += distortion.x;
@@ -97,23 +105,24 @@ void main() {
     vec3 norm		= normalize(normal);
     vec3 lightDir	= normalize(lightPos - inWorldPos);
     float diff		= max(dot(norm, lightDir), 0.0);
-    vec3 diffuse	= diff * lightCol.rgb;
+    vec3 diffuse	= diff * vec3(0.5,0.5,0.5);//lightCol.rgb;
     
 	vec3 viewDir	= normalize ( cameraPosition - inWorldPos );
     vec3 reflectDir = reflect(-lightDir, norm);
-    float spec		= pow(max(dot(viewDir, reflectDir), 0.0), 100);
+    float spec		= pow(max(dot(viewDir, reflectDir), 0.0), 50);
     vec3 specular	= spec * lightCol.rgb;
     
-    vec3 result = (ambient + diffuse + specular) * fragColor.rgb;
-    fragColor = vec4(result, 1.0);
+    vec3 result = (ambient + diffuse) * fragColor.rgb;
+	result += specular;
 
 	if(currentDepth > 0.0)
-		fragColor.rgb = mix(vec3(0.3f, 0.6f, 0.8f), fragColor.rgb, visibility);
-
+		result = mix(vec3(0.3f, 0.6f, 0.8f), result, visibility);
 	else
-		fragColor.rgb = mix(sky.rgb, fragColor.rgb, visibility);
+		result = mix(sky.rgb, result, visibility);
 
-	//vec3 normalizedNormal = normalize(inNormal);
-    //vec3 color = vec3((normalizedNormal.x * 0.5) + 0.5, (normalizedNormal.y * 0.5) + 0.5, (normalizedNormal.z * 0.5) + 0.5);
-	//fragColor = vec4(color, 1.0);//sky;// testReflect;//testRefract;//
+	fragColor = vec4(result, 1.0);
+
+	//vec3 normalizedNormal = normalize(normal);
+    //vec3 color = (normalizedNormal * 0.5) + 0.5;
+	//fragColor = vec4(color, 1.0);// testReflect;//testRefract;//
 }	
